@@ -30507,6 +30507,20 @@ async function createNode(){
     return Node
 }
 createNode().then(Node=>console.log("done"))
+
+async function addFile () { 
+    const { cid } = await node.add('Hello world!')
+    console.log('successfully stored', cid)
+} 
+
+addFile()
+
+async function catFile(){
+    for await (const data of node.cat("Qmf412jQZiuVUtdgnB36FXFX7xg5V6KEbSJ4dpQuhkLyfD")){
+        return data.toString()
+    }
+}
+catFile()
 },{"orbit-db":598}],216:[function(require,module,exports){
 'use strict';
 
