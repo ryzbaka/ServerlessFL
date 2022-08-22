@@ -1,0 +1,28 @@
+{
+  "name": "serverlessfl",
+  "version": "1.0.0",
+  "description": "",
+  "main": "main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ryzbaka/ServerlessFL.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ryzbaka/ServerlessFL/issues"
+  },
+  "homepage": "https://github.com/ryzbaka/ServerlessFL#readme",
+  "dependencies": {
+    "ipfs": "^0.63.5",
+    "ipfs-core": "^0.15.4",
+    "level-js": "^6.1.0",
+    "levelup": "^5.1.1",
+    "orbit-db": "^0.28.6",
+    "uniq": "^1.0.1"
+  }
+}
