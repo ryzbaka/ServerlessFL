@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://unpkg.com/peerjs@1.3.1/dist/peerjs.min.js"></script>
+    <title>PeerChat</title>
+</head>
+<body>
+   <h1>PeerChat</h1> 
+   <p id="peer-id-container">Connecting to PeerServer</p>
+   <input id = "peer-id-input">
+   <button id= "connect-to-peer-btn">Connect</button>
+   <button id= "refresh-peer-list-btn">Refresh Peers List</button>
+   <ul id="peer-list">
+    <li>No peers...</li>
+   </ul>
+   <input id = "chat-box" placeholder="type message here">
+   <input id = "chat-box-peer-id" placeholder="type peer id here">
+   <button id= "chat-with-peer-btn">Send</button>
+   <ul id="chat-log"></ul>
+   <script>
+       const peer = new Peer();
+       peer.on('open',(id)=>{
+           document.querySelector("#peer-id-container").innerText = `This peer's id : ${id}`;
+       })
+       peer.on('disconnected',()=>{
+           document.querySelector("#peer-id-container").innerText = `Disconnected from PeerServer`;
+       })
+       peer.on("connection",(connection)=>{
+           refreshPeerList();
+           connection.on("data",(data)=>{
+               console.log(`${connection.peer}: ${data}`);
+               addMessageToLog(`${connection.peer}: ${data}`);
+           })
+       })
+
+       function addMessageToLog(messageText){
+            const logContainer = document.querySelector("#chat-log");
+            const messageContainer = document.createElement("li");
+            messageContainer.innerText = messageText;
+
+            logContainer.appendChild(messageContainer);
+       }
+
+       function refreshPeerList(){
+        const peerList = document.querySelector("#peer-list");
+        peerList.innerHTML = ""
+        const connectedPeers = Object.keys(peer.connections);   
+            if(connectedPeers.length>0){
+               connectedPeers.forEach((peer_id,index)=>{
+                   const listItem = document.createElement("li");
+                   listItem.innerText = peer_id
+                   peerList.appendChild(listItem)
+               })
+           }
+       }
+       const refreshPeerListBtn = document.querySelector("#refresh-peer-list-btn");
+       refreshPeerListBtn.addEventListener("click",refreshPeerList);
+       const connectToPeerBtn = document.querySelector("#connect-to-peer-btn");
+       connectToPeerBtn.addEventListener("click",()=>{
+           const peerIdInput = document.querySelector("#peer-id-input");
+           const otherPeerId = peerIdInput.value;
+           peerIdInput.value = "";
+           const conn  = peer.connect(otherPeerId);
+           
+           conn.on("open",()=>{
+               console.log(`connected to ${conn.peer}`);
+               refreshPeerList();
+           })
+           conn.on("close",()=>{
+               console.log(`disconnected from ${conn.peer}`);
+               refreshPeerList();
+           })
+           conn.on("data",(data)=>{
+               console.log(`${conn.peer}: ${data}`);
+               addMessageToLog(`${conn.peer}: ${data}`);
+           })
+       })
+       
+       const chatBtn = document.querySelector("#chat-with-peer-btn");
+       chatBtn.addEventListener("click",chatWithPeer);
+       function chatWithPeer(){
+           const chatBox = document.querySelector("#chat-box");
+           const peerIdBox = document.querySelector("#chat-box-peer-id");
+           const chatMessage = chatBox.value;
+           const peerId = peerIdBox.value;
+           
+           chatBox.value = "";
+           peerIdBox.value = "";
+
+           peer.connections[peerId][0].send(chatMessage);
+           addMessageToLog(`${peer.id}: ${chatMessage}`);
+       }
+   </script>
+</body>
+</html>
