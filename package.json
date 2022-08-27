@@ -27,5 +27,8 @@
     "orbit-db": "^0.28.6",
     "pandas-js": "^0.2.4",
     "uniq": "^1.0.1"
+  },
+  "devDependencies": {
+    "prettier": "^2.7.1"
   }
 }
