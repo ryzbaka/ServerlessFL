@@ -6,9 +6,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>unique stuff</title>
     <script src="https://cdn.jsdelivr.net/npm/ipfs/dist/index.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@2.0.0/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/danfojs@1.1.0/lib/bundle.min.js"></script>
 </head>
 <body>
     <h1>Serverless FedAvg</h1>
-    <script src="fedAvgBundle.js"></script>
+    <!-- <script src="fedAvgBundle.js"></script> -->
+    <button id="load_dataset_btn">Load dataset</button>
+    <button id="print_head_btn" disabled="true">Print dataset head</button>
+    <script src="fedAvg.js"></script>
 </body>
 </html>
