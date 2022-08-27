@@ -90,6 +90,7 @@ function load_data(){
 }
 
 function loadDataset(){
+    if(!dataset){
     console.log("reading training dataset")
     dfd.readCSV("https://raw.githubusercontent.com/ryzbaka/ServerlessFL/main/training_data.csv").then(data=>{
         dataset = data
@@ -97,9 +98,24 @@ function loadDataset(){
         training_y = data.iloc({columns:[`${data.shape[1]-1}:`],rows:[`0:${data.shape[0]-1}`]})
         const print_head_btn = document.querySelector("#print_head_btn")
         print_head_btn.disabled = false
+        Swal.fire({
+            position: 'top-end',
+            icon: 'success',
+            title: 'Loaded training dataset.',
+            showConfirmButton: false,
+            timer: 1500
+        })
         console.log("done reading training dataset")
     })
-    
+    }else{
+        Swal.fire({
+            position: 'top-end',
+            icon: 'info',
+            title: 'Training dataset already loaded.',
+            showConfirmButton: false,
+            timer: 1500
+        })  
+    }    
 }
 
 function main(){
@@ -110,7 +126,13 @@ function main(){
 const load_dataset_btn = document.querySelector("#load_dataset_btn")
 load_dataset_btn.addEventListener("click",loadDataset)
 const print_head_btn = document.querySelector("#print_head_btn")
-print_head_btn.addEventListener("click",()=>dataset?dataset.head(5).print():alert("No dataset loaded!"))
+print_head_btn.addEventListener("click",()=>dataset?dataset.head(5).print():Swal.fire({
+    position: 'top-end',
+    icon: 'error',
+    title: 'No training dataset loaded.',
+    showConfirmButton: false,
+    timer: 1500
+}))
 let training_X = null
 let training_y = null
 let dataset = null
