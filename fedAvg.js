@@ -90,24 +90,27 @@ function load_data(){
 }
 
 function loadDataset(){
-    console.log("reading dataset")
-    dfd.readCSV(
-        "https://raw.githubusercontent.com/plotly/datasets/master/finance-charts-apple.csv"
-    ).then(data=>{
+    console.log("reading training dataset")
+    dfd.readCSV("https://raw.githubusercontent.com/ryzbaka/ServerlessFL/main/training_data.csv").then(data=>{
         dataset = data
+        training_X = data.iloc({columns:[`0:${data.shape[1]-1}`],rows:[`0:${data.shape[0]-1}`]})
+        training_y = data.iloc({columns:[`${data.shape[1]-1}:`],rows:[`0:${data.shape[0]-1}`]})
         const print_head_btn = document.querySelector("#print_head_btn")
         print_head_btn.disabled = false
-        console.log("done reading dataset")
+        console.log("done reading training dataset")
     })
     
 }
 
 function main(){
-   console.error("Main function not implemented yet.") 
+    console.log(`training_X shape: ${training_X.shape}`)
+    console.log(`training_y shape: ${training_y.shape}`)
 }
 
 const load_dataset_btn = document.querySelector("#load_dataset_btn")
 load_dataset_btn.addEventListener("click",loadDataset)
 const print_head_btn = document.querySelector("#print_head_btn")
 print_head_btn.addEventListener("click",()=>dataset.head(5).print())
+let training_X = null
+let training_y = null
 let dataset = null
