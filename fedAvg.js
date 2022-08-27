@@ -110,7 +110,7 @@ function main(){
 const load_dataset_btn = document.querySelector("#load_dataset_btn")
 load_dataset_btn.addEventListener("click",loadDataset)
 const print_head_btn = document.querySelector("#print_head_btn")
-print_head_btn.addEventListener("click",()=>dataset.head(5).print())
+print_head_btn.addEventListener("click",()=>dataset?dataset.head(5).print():alert("No dataset loaded!"))
 let training_X = null
 let training_y = null
 let dataset = null

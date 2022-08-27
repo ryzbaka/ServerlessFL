@@ -5,15 +5,29 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ServerlessFL</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/ipfs/dist/index.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@2.0.0/dist/tf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/danfojs@1.1.0/lib/bundle.min.js"></script>
 </head>
 <body>
-    <h1>Serverless FedAvg</h1>
-    <!-- <script src="fedAvgBundle.js"></script> -->
-    <button id="load_dataset_btn">Load dataset</button>
-    <button id="print_head_btn" disabled="true">Print dataset head</button>
+    <!-- <h1>Serverless FedAvg</h1> -->
+    <nav>
+        <div class="nav-wrapper">
+          <a href="#" class="brand-logo">Serverless Federated Learning</a>
+          <ul id="nav-mobile" class="right hide-on-med-and-down">
+            <!-- <li><a href="sass.html">Sass</a></li>
+            <li><a href="badges.html">Components</a></li>
+            <li><a href="collapsible.html">JavaScript</a></li> -->
+          </ul>
+        </div>
+    </nav>
+    <div>
+        <a class = "waves-effect waves-light btn"id="load_dataset_btn">Load dataset</a>
+        <a class = "waves-effect waves-light btn"id="print_head_btn">Print dataset head</a>
+    </div>
     <script src="fedAvg.js"></script>
 </body>
 </html>
