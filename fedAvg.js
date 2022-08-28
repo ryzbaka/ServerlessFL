@@ -187,6 +187,7 @@ function train(nn,epochs){
     }
     trainedModel = nn;
     plotTrainingLoss(nn)
+    test(trainedModel)
 }
 
 function plotTrainingLoss(nn){
@@ -214,6 +215,11 @@ function test(nn){
         //calculating MAE
         let mae = tf.sum(tf.abs(testing_y.tensor.sub(predictionResult))).arraySync()/predictionResult.shape[0]
         console.log(`MAE: ${mae}`)
+        const comparisonData = new dfd.DataFrame({
+            "actual": Array.from(training_y.tensor.dataSync()),
+            "predicted": Array.from(predictionResult.dataSync()),
+        })
+        comparisonData.plot("plot_test").line()
         return mae
     }
 }
@@ -235,4 +241,5 @@ let testing_X = null
 let testing_y = null
 let trainedModel = null
 let testingResult = null
+let predictionResult = null
 const normalTrain = document.querySelector("#normal_train").addEventListener("click",normalMain)
