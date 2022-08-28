@@ -9,8 +9,11 @@
     <script src="//cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/ipfs/dist/index.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@2.0.0/dist/tf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/danfojs@1.1.0/lib/bundle.min.js"></script>
+  
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-converter"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl"></script>
 </head>
 <body>
     <!-- <h1>Serverless FedAvg</h1> -->
@@ -25,9 +28,10 @@
         </div>
     </nav>
     <div>
-        <a class = "waves-effect waves-light btn"id="load_dataset_btn">Load dataset</a>
-        <a class = "waves-effect waves-light btn"id="print_head_btn">Print dataset head</a>
+        <btn class = "waves-effect waves-light btn"id="normal_train">Run Normal Training Session</btn>
     </div>
+    <div id="plot_div"></div>
+    <div id="log"></div>
     <script src="fedAvg.js"></script>
 </body>
 </html>
