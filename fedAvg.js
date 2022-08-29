@@ -185,9 +185,11 @@ function train(nn,epochs){
         nn.lossHistory.push(tf.mean(tf.tensor(train_loss)).arraySync())
         console.log(`Epoch: ${epoch+1} training_loss: ${tf.mean(tf.tensor(train_loss)).arraySync()}`)
     }
+    //TO DO: Add validation for best model selection.
     trainedModel = nn;
     plotTrainingLoss(nn)
     test(trainedModel)
+    return trainedModel
 }
 
 function plotTrainingLoss(nn){
@@ -231,7 +233,33 @@ function normalMain(){
         train(neuralNetwork,10)
     })
 }
+// Federated Learning implementation
+class FedAvg{
+    constructor(sampling_rate,number_of_clients,clients){
+        this.C = sampling_rate
+        this.K = number_of_clients
+        this.clients = clients
+        this.nn = new BP()
+        this.nns = []
+        //distribution
 
+    }
+}
+
+function loadFederatedDataset{
+    console.error("Function not implemented yet.")
+}
+
+function federatedMain(){
+    // let clients = []
+    // for(let i=1;i<11;i++){
+    //     clients.push(`Task1_W_Zone${i}`)
+    // }    
+    // let sampling_rate = 0.5
+    // let number_of_clients = 10
+    // fed = new FedAvg()    
+    console.error("Function not implemented yet.")
+}
 //all these global variables have to be stored in leveldb at the end of a main function
 let training_X = null
 let training_y = null
