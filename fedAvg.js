@@ -230,7 +230,7 @@ function normalMain(){
     loadDataset().then(data=>{
         console.log(data)
         const neuralNetwork = new BP(len=training_X.shape[0],input_dim=training_X.shape[1], batch_size=32,lr=0.01, file_name="test")
-        train(neuralNetwork,10)
+        train(neuralNetwork,20)
     })
 }
 // Federated Learning implementation
@@ -246,18 +246,11 @@ class FedAvg{
     }
 }
 
-function loadFederatedDataset{
-    console.error("Function not implemented yet.")
+function loadFederatedDataset(){
+   console.error("function not implemented") 
 }
 
 function federatedMain(){
-    // let clients = []
-    // for(let i=1;i<11;i++){
-    //     clients.push(`Task1_W_Zone${i}`)
-    // }    
-    // let sampling_rate = 0.5
-    // let number_of_clients = 10
-    // fed = new FedAvg()    
     console.error("Function not implemented yet.")
 }
 //all these global variables have to be stored in leveldb at the end of a main function
@@ -270,4 +263,5 @@ let testing_y = null
 let trainedModel = null
 let testingResult = null
 let predictionResult = null
+//federated learning global vars
 const normalTrain = document.querySelector("#normal_train").addEventListener("click",normalMain)
