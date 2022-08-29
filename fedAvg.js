@@ -1,12 +1,12 @@
 
-// const tf = require("@tensorflow/tfjs")
 console.log("starting fedavg script...")
 
 class BP{
-    constructor(len,input_dim, batch_size,lr, file_name){
+    constructor(input_dim, batch_size,lr, file_name){
+        this.input_dim = input_dim
         this.batch_size=batch_size //hard coded for now.
         this.filename = file_name //WHAT IS FILENAME USED FOR???
-        this.len = len //number of training data instances
+        // this.len = len //number of training data instances
         this.lr = lr //learning rate
         this.lossHistory = []
         // defining layers
@@ -41,11 +41,6 @@ class BP{
     }
 
     forward_prop(data,label){
-        // console.log("===BATCH SHAPES===")
-        // console.log(`X: ${data.shape}`)
-        // console.log(`y: ${label.shape}`)
-        // console.log("==================")
-
         this.input = data
         this.z1 = this.input.dot(this.w1)
         
@@ -63,30 +58,39 @@ class BP{
         return this.output_layer
     }
     
-    getLayers(){
-        const layers = [
-            this.input,
-            this.w1, 
-            this.z1,
-            this.hidden_layer_1,
-            this.w2, 
-            this.z2,
-            this.hidden_layer_2,
-            this.w3, 
-            this.z3,
-            this.hidden_layer_3,
-            this.w4, 
-            this.z4, 
-            this.output_layer
-        ]
-        layers.forEach((layer,index)=>{
-            console.log("==========")
-            console.log(`Layer ${index}:`)
-            console.log(layer)
-            console.log("==========")
+    getWeights(){
+        const layers = { 
+         "input":this.input,
+         "w1":this.w1, 
+         "z1":this.z1,
+         "hidden_layer_1":this.hidden_layer_1,
+         "w2":this.w2, 
+         "z2":this.z2,
+         "hidden_layer_2":this.hidden_layer_2,
+         "w3":this.w3, 
+         "z3":this.z3,
+         "hidden_layer_3":this.hidden_layer_3,
+         "w4":this.w4, 
+         "z4":this.z4, 
+         "output_layer":this.output_layer
+        }
+        Object.keys(layers).forEach(key=>{
+            const intermediaryDfd = new dfd.DataFrame(tf.clone(layers[key]))
+            const jsonTensor = dfd.toJSON(intermediaryDfd)
+            layers[key] = jsonTensor
         })
+        return layers
     }
-
+    loadWeights(layers){
+        Object.keys(layers).forEach(key=>{
+            this[key] = tf.clone((new dfd.DataFrame(layers[key])).tensor)
+        })   
+    }
+    clone(){
+        const clonedNeuralNetwork = new BP(this.input_dim,this.batch_size,this.lr,this.file_name)
+        clonedNeuralNetwork.loadWeights(this.getWeights())
+        return clonedNeuralNetwork
+    }
     backward_prop(label){
         //calculating derivate for w4
         const l_deri_out = this.output_layer.sub(label)
@@ -113,66 +117,35 @@ class BP{
     }
 }
 
-function load_data(){
-    //load a csv data file
-    console.error("this function has not been implemented yet") 
-}
 async function loadDataset(){
 
     console.log("reading training dataset")
-    await dfd.readCSV("https://raw.githubusercontent.com/ryzbaka/ServerlessFL/main/training_data.csv").then(data=>{
-        training_X = data.iloc({columns:[`0:${data.shape[1]-1}`],rows:[`0:${data.shape[0]-1}`]})
-        training_y = data.iloc({columns:[`${data.shape[1]-1}:`],rows:[`0:${data.shape[0]-1}`]})
-        console.log("done reading training dataset")
-    })
-    await dfd.readCSV("https://raw.githubusercontent.com/ryzbaka/ServerlessFL/main/validation_data.csv").then(data=>{
-        validation_X = data.iloc({columns:[`0:${data.shape[1]-1}`],rows:[`0:${data.shape[0]-1}`]})
-        validation_y = data.iloc({columns:[`${data.shape[1]-1}:`],rows:[`0:${data.shape[0]-1}`]})
-        console.log("done reading validation dataset")          
-    })
-    await dfd.readCSV("https://raw.githubusercontent.com/ryzbaka/ServerlessFL/main/testing_data.csv").then(data=>{
-        testing_X = data.iloc({columns:[`0:${data.shape[1]-1}`],rows:[`0:${data.shape[0]-1}`]})
-        testing_y = data.iloc({columns:[`${data.shape[1]-1}:`],rows:[`0:${data.shape[0]-1}`]})
-        console.log("done reading testing dataset")  
-    })
-    return "loaded datasets"
+    let trainingData = await dfd.readCSV("https://raw.githubusercontent.com/ryzbaka/ServerlessFL/main/training_data.csv")//.then(data=>{
+    let training_X = trainingData.iloc({columns:[`0:${trainingData.shape[1]-1}`],rows:[`0:${trainingData.shape[0]-1}`]})
+    let training_y = trainingData.iloc({columns:[`${trainingData.shape[1]-1}:`],rows:[`0:${trainingData.shape[0]-1}`]})
+    
+    let validationData = await dfd.readCSV("https://raw.githubusercontent.com/ryzbaka/ServerlessFL/main/validation_data.csv")//.then(data=>{
+    let validation_X = validationData.iloc({columns:[`0:${validationData.shape[1]-1}`],rows:[`0:${validationData.shape[0]-1}`]})
+    let validation_y = validationData.iloc({columns:[`${validationData.shape[1]-1}:`],rows:[`0:${validationData.shape[0]-1}`]})
+    
+    let testingData = await dfd.readCSV("https://raw.githubusercontent.com/ryzbaka/ServerlessFL/main/testing_data.csv")//.then(data=>{
+    let testing_X = testingData.iloc({columns:[`0:${testingData.shape[1]-1}`],rows:[`0:${testingData.shape[0]-1}`]})
+    let testing_y = testingData.iloc({columns:[`${testingData.shape[1]-1}:`],rows:[`0:${testingData.shape[0]-1}`]})
+    
+    return [[training_X,training_y],[validation_X,validation_y],[testing_X,testing_y]]
 }
 
-function validateDataLoad(){
-    if (training_X && training_y && validation_X && validation_y && testing_X && testing_y){
-        return true
-    }else{
-        return false
-    }
-}
-
-
-function train(nn,epochs){
-    if(!validateDataLoad()){
-        console.error("No datasets loaded!!!")
-        return null
-    }
-    console.log("TRAINING STARTED")    
-    console.log(`Training X shape ${training_X.tensor.shape}`)
-    console.log(`Training y shape ${training_X.tensor.shape}`)
-
-    console.log(`Testing X shape ${testing_X.tensor.shape}`)
-    console.log(`Testing y shape ${testing_y.tensor.shape}`)
-
-    console.log(`Validation X shape ${validation_X.tensor.shape}`)
-    console.log(`Validation y shape ${validation_y.tensor.shape}`)
+function train(nn,epochs,training_X,training_y,testing_X,testing_y){
     nn.lossHistory = []
     nn.validationLossHistory
-    nn.len = training_X.shape[0]
-    // nn.batch_size = batch_size
     nn.epochs = epochs
-    batch = nn.len/nn.batch_size
+    batch = training_X.shape[0]/nn.batch_size
     //training
     min_epochs = 10
     best_model = null
     min_val_loss = 5
     for(let epoch=0;epoch<epochs;epoch++){
-        train_loss = []
+         let train_loss = []
         for(let i=0;i<batch;i++){
             let start = i*nn.batch_size
             let end = start+nn.batch_size
@@ -186,10 +159,10 @@ function train(nn,epochs){
         console.log(`Epoch: ${epoch+1} training_loss: ${tf.mean(tf.tensor(train_loss)).arraySync()}`)
     }
     //TO DO: Add validation for best model selection.
-    trainedModel = nn;
+    // let trainedModel = nn;
     plotTrainingLoss(nn)
-    test(trainedModel)
-    return trainedModel
+    test(nn,testing_X,testing_y)
+    return nn
 }
 
 function plotTrainingLoss(nn){
@@ -197,28 +170,29 @@ function plotTrainingLoss(nn){
     lossHistory.plot("plot_div").line()
 }
 
-function test(nn){
+function test(nn, testing_X,testing_y){
+    //removed global variables
     if(!testing_X){
         console.error("No testing data.")
     }else{
-        let test_x = testing_X;
-        let test_y = testing_y
+        // let test_x = testing_X;
+        // let test_y = testing_y
         let pred = []
-        let batch = test_y.shape[0]/nn.batch_size
+        let batch = testing_y.shape[0]/nn.batch_size
 
         for(let i=0;i<batch;i++){
             let start = i * nn.batch_size
             let end = start+nn.batch_size
-            res = nn.forward_prop(testing_X.iloc({rows:[`${start}:${end}`]}).tensor,testing_y.iloc({rows:[`${start}:${end}`]}).tensor)
+            let res = nn.forward_prop(testing_X.iloc({rows:[`${start}:${end}`]}).tensor,testing_y.iloc({rows:[`${start}:${end}`]}).tensor)
             pred = pred.concat(res.arraySync())
         }
-        predictionResult = tf.tensor(pred)
+        let predictionResult = tf.tensor(pred)
         // let predictionResultTensor = predictionResult
         //calculating MAE
         let mae = tf.sum(tf.abs(testing_y.tensor.sub(predictionResult))).arraySync()/predictionResult.shape[0]
         console.log(`MAE: ${mae}`)
         const comparisonData = new dfd.DataFrame({
-            "actual": Array.from(training_y.tensor.dataSync()),
+            "actual": Array.from(testing_y.tensor.dataSync()),
             "predicted": Array.from(predictionResult.dataSync()),
         })
         comparisonData.plot("plot_test").line()
@@ -226,48 +200,77 @@ function test(nn){
     }
 }
 
-function normalMain(){
-    loadDataset().then(data=>{
-        console.log(data)
-        const neuralNetwork = new BP(len=training_X.shape[0],input_dim=training_X.shape[1], batch_size=32,lr=0.01, file_name="test")
-        train(neuralNetwork,10)
-    })
+function saveModel(nn,name){
+    //saving model to localStorage
+    const modelObject = {
+        weights: nn.getWeights(),
+        input_dim: nn.input_dim,
+        batch_size: nn.batch_size,
+        lr: nn.lr,
+        file_name: nn.file_name        
+    }
+    window.localStorage.setItem(name,JSON.stringify(modelObject))
+}
+
+function loadModel(name){
+    const modelObject = JSON.parse(window.localStorage.getItem(name))
+    const neuralNetwork = new BP(modelObject.input_dim, modelObject.batch_size, modelObject.lr,modelObject.file_name)
+    neuralNetwork.loadWeights(modelObject.weights)
+    return neuralNetwork
+}
+
+async function normalMain(){
+    let [[training_X,training_y],[validation_X,validation_y],[testing_X,testing_y]] = await loadDataset()
+    let neuralNetwork = new BP(input_dim=training_X.shape[1], batch_size=32,lr=0.01, file_name="test")
+    let trainedNeuralNetwork = train(neuralNetwork,20,training_X,training_y,testing_X,testing_y)
+    let modelName = (Math.random() + 1).toString(36).substring(7)
+    saveModel(trainedNeuralNetwork,modelName)
+    console.log(`Saved model as: ${modelName}`)
+    testX = testing_X
+    testY = testing_y
+    // normalTrainedWeights =  trainedNeuralNetwork.getWeights() //normalTrainedWeights is a global variable that has to be deleted.
+
 }
 // Federated Learning implementation
+async function loadFederatedDataset(index){
+    console.log("reading training dataset")
+    let trainingData = await dfd.readCSV("https://raw.githubusercontent.com/ryzbaka/ServerlessFL/main/training_data.csv")//.then(data=>{
+    let training_X = trainingData.iloc({columns:[`0:${trainingData.shape[1]-1}`],rows:[`0:${trainingData.shape[0]-1}`]})
+    let training_y = trainingData.iloc({columns:[`${trainingData.shape[1]-1}:`],rows:[`0:${trainingData.shape[0]-1}`]})
+    
+    let validationData = await dfd.readCSV("https://raw.githubusercontent.com/ryzbaka/ServerlessFL/main/validation_data.csv")//.then(data=>{
+    let validation_X = validationData.iloc({columns:[`0:${validationData.shape[1]-1}`],rows:[`0:${validationData.shape[0]-1}`]})
+    let validation_y = validationData.iloc({columns:[`${validationData.shape[1]-1}:`],rows:[`0:${validationData.shape[0]-1}`]})
+    
+    let testingData = await dfd.readCSV("https://raw.githubusercontent.com/ryzbaka/ServerlessFL/main/testing_data.csv")//.then(data=>{
+    let testing_X = testingData.iloc({columns:[`0:${testingData.shape[1]-1}`],rows:[`0:${testingData.shape[0]-1}`]})
+    let testing_y = testingData.iloc({columns:[`${testingData.shape[1]-1}:`],rows:[`0:${testingData.shape[0]-1}`]})
+    
+    return [[training_X,training_y],[validation_X,validation_y],[testing_X,testing_y]] 
+}
 class FedAvg{
-    constructor(sampling_rate,number_of_clients,clients){
-        this.C = sampling_rate
-        this.K = number_of_clients
+    constructor(C,K,r,clients,input_dim,batch_size,lr){
+        this.C = C
+        this.K = K
+        this.r = r
         this.clients = clients
-        this.nn = new BP()
+        this.nn = new BP(input_dim, batch_size, lr, "server")
         this.nns = []
-        //distribution
 
+        for(let i=0;i<this.K;i++){
+            //for each client create a copy of the neural networks
+            console.log("Function is still being implemented.")
+        }
     }
 }
 
-function loadFederatedDataset{
-    console.error("Function not implemented yet.")
+async function federatedMain(){
+    const C = 0.5 // sampling rate
+    const K = 10 //number of clients
+    const r = 5 //number of communication rounds
+    const clients = []
 }
-
-function federatedMain(){
-    // let clients = []
-    // for(let i=1;i<11;i++){
-    //     clients.push(`Task1_W_Zone${i}`)
-    // }    
-    // let sampling_rate = 0.5
-    // let number_of_clients = 10
-    // fed = new FedAvg()    
-    console.error("Function not implemented yet.")
-}
-//all these global variables have to be stored in leveldb at the end of a main function
-let training_X = null
-let training_y = null
-let validation_X = null
-let validation_y = null
-let testing_X = null
-let testing_y = null
-let trainedModel = null
-let testingResult = null
-let predictionResult = null
+let testX = null
+let testY = null
 const normalTrain = document.querySelector("#normal_train").addEventListener("click",normalMain)
+const federatedTrain = document.querySelector("#federated_train").addEventListener("click",federatedMain)
