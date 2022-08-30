@@ -85,12 +85,12 @@ class BP{
         Object.keys(layers).forEach(key=>{
             this[key] = tf.clone((new dfd.DataFrame(layers[key])).tensor)
         })   
-OBOBOB    }
-OBOBOB    clone(){
+    }
+    clone(){
         const clonedNeuralNetwork = new BP(this.len,this.input_dim,this.batch_size,this.lr,this.file_name)
-OBOBOB        clonedNeuralNetwork.loadWeights(this.getWeights())
+        clonedNeuralNetwork.loadWeights(this.getWeights())
         return clonedNeuralNetwork
-OBOBOBOBOBOB    }
+    }
     backward_prop(label){
         //calculating derivate for w4
         const l_deri_out = this.output_layer.sub(label)
