@@ -5,7 +5,7 @@ class BP{
     constructor(len,input_dim, batch_size,lr, file_name){
         this.input_dim = input_dim
         this.batch_size=batch_size //hard coded for now.
-        this.filename = file_name //WHAT IS FILENAME USED FOR???
+        this.filename = file_name 
         this.len = len //number of training data instances
         this.lr = lr //learning rate
         this.lossHistory = []
