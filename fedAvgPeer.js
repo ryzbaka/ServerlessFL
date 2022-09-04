@@ -501,8 +501,8 @@ class Federation{
         }
     }
     setServer(somePeerNode){
-        console.log("setting server")
-        console.log(somePeerNode.peer)
+        // console.log("setting server")
+        // console.log(somePeerNode.peer)
         this.server = somePeerNode
         this.server.peerStatus = "federated"
         // console.log(this.server.peer.id)
@@ -526,9 +526,9 @@ class Federation{
             "server": this.server.peer.id,
             "clients":this.clients
         } 
-        console.log(configObject)
+        // console.log(configObject)
         const blob = new Blob([JSON.stringify(configObject)], { type: 'application/json' })
-        console.log(JSON.stringify(configObject))
+        // console.log(JSON.stringify(configObject))
         const filename = `${this.name}-config`
         const fileObjects = [
             new File([blob],`${filename}.json`)
