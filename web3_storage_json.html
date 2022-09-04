@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>web3.storage</title>
+    <style>
+      body {
+        font-size: 16px;
+        font-family: -apple-system, system-ui;
+        padding: 0;
+        margin: 0;
+      }
+      form {
+        width: 500px;
+        padding: 16px;
+        max-width: 100%;
+        display: block;
+        margin: 0 auto;
+        color:#333;
+      }
+      label {
+        display: block;
+        padding: 32px 0 8px;
+        font-weight: 700;
+      }
+      #token {
+        width: 100%;
+        padding: 4px;
+        font-size: 1.2rem;
+      }
+      #output {
+        display: block;
+        padding: 16px;
+        margin: 0;
+        color: lime;
+        background:#222;
+        font-family: Courier New, ui-monospace, monospace;
+        font-weight: 500;
+        line-height: 1.6;
+        position: fixed;
+        bottom: 0;
+        height: 33.3%;
+        width: 100%;
+        overflow-y: scroll;
+      }
+      #output a {
+        color: aqua
+      }
+      input[type=submit] {
+        display: block;
+        padding: 4px 16px;
+        font-weight: 700;
+        font-size: 16px;
+        margin-top: 32px;
+      }
+      h1 {
+        text-align: center;
+        font-size: 24px;
+      }
+      h1 span {
+        display: block;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>⁂
+        <span>web3.storage</span>
+      </h1>
+    </header>
+    <button id="upload-button">UPLOAD BUTTON</button>
+    <button id="download-button">DOWNLOAD BUTTON</button>
+    <script type="module">
+      import { Web3Storage } from 'https://cdn.jsdelivr.net/npm/web3.storage/dist/bundle.esm.min.js'
+      window.Web3Storage = Web3Storage
+      const uploadBtn = document.getElementById("upload-button")
+      const downloadBtn = document.getElementById("download-button")
+
+      async function uploadJSON(){
+        const token = prompt("Enter web3Storage API Token")
+        const someObject = {
+          "someValue":"placeholder"
+        }
+        const value = prompt("Enter a value to be stored")
+        someObject["someValue"] = value
+        const blob = new Blob([JSON.stringify(someObject)], { type: 'application/json' })
+        const filename = prompt("Enter file name for json")
+        const fileObjects = [
+          // new File(['contents-of-file-1'], 'plain-utf8.txt'),
+          new File([blob], `${filename}.json`)
+        ]
+        const client = new Web3Storage({token:token})
+        const cid = await client.put(fileObjects)
+        console.log(`Stored JSON file: ${filename} with CID: ${cid}`)
+      }
+
+      uploadBtn.addEventListener("click",uploadJSON)
+      
+      async function downloadJSON(){
+        const cid = prompt("enter directory CID")
+        const filename = prompt("enter json file name")
+        const url = `https://${cid}.ipfs.w3s.link/${filename}.json`
+        console.log(`fetching data from ${url}`)
+        const data = await fetch(url)
+        const json = await data.json()
+        console.log(data)
+        console.log(json)
+      }
+      downloadBtn.addEventListener("click",downloadJSON)
+    </script>
+  </body>
+</html>

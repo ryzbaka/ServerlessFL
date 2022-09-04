@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ServerlessFL</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+    <script src="//cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/ipfs/dist/index.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/danfojs@1.1.0/lib/bundle.min.js"></script>
+  
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-converter"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lodash@4.17.21/lodash.min.js"></script>
+    <script src="https://unpkg.com/peerjs@1.3.1/dist/peerjs.min.js"></script>
+    <style>
+        #output {
+        display: block;
+        padding: 16px;
+        margin: 0;
+        color: lime;
+        background:#222;
+        font-family: Courier New, ui-monospace, monospace;
+        font-weight: 500;
+        line-height: 1.6;
+        /* position: fixed; */
+        bottom: 0;
+        height: 33.3%;
+        width: 100%;
+        overflow-y: scroll;
+      }
+      #output a {
+        color: aqua
+      }
+    </style>
+</head>
+<body>
+    <!-- <h1>Serverless FedAvg</h1> -->
+    <nav>
+        <div class="nav-wrapper">
+          <a href="#" class="brand-logo">Serverless Federated Learning</a>
+          <ul id="nav-mobile" class="right hide-on-med-and-down">
+            <!-- <li><a href="sass.html">Sass</a></li>
+            <li><a href="badges.html">Components</a></li>
+            <li><a href="collapsible.html">JavaScript</a></li> -->
+          </ul>
+        </div>
+    </nav>
+    <div>
+        <btn class = "waves-effect waves-light btn"id="normal_train">Run Normal Training Session</btn>
+        <btn class = "waves-effect waves-light btn"id="federated_train">Run Simulated Federated Training Session</btn>
+    </div>
+    <div>
+        <div class="row">
+            <div class="col s12 m6">
+              <div class="card blue-grey darken-1">
+                <div class="card-content white-text">
+                  <span class="card-title" id="peer-id-container">Peer ID: </span>
+                  <br>
+                  <span id="peer-designation">Peer Designation: </span>
+                  <br>
+                  <span id="peer-status">Peer Status:</span>
+                  <br>
+                  <hr>
+                  <strong><span>Federation Details</span></strong>
+                  <br>
+                  <span id="federation-name">Name: </span>
+                  <table>
+                    <thead>
+                      <tr>
+                          <th>Peer ID</th>
+                          <th>Peer Status</th>
+                          <th>Peer Designation</th>
+                          <th>Connection Status</th>
+                      </tr>
+                    </thead>
+            
+                    <tbody id="federation_table_body">
+                      <!-- <tr> -->
+                        <!-- <td>Alvin</td> -->
+                        <!-- <td>Eclair</td> -->
+                        <!-- <td>Connected</td> -->
+                      <!-- </tr> -->
+                    </tbody>
+                  </table>
+                </div>
+                <div class="card-action">
+                  <a>Join/Create Federation</a>
+                  <a id="p2p-main">P2P FedAvg</a>
+                </div>
+              </div>
+            </div>
+        </div>
+    </div>
+    <div id="plot_div"></div>
+    <div id="plot_test"></div>
+    <div id="output"></div>
+    <script src="level_bundle.js"></script>
+    <script src="fedAvgPeer.js"></script>
+</body>
+</html>
