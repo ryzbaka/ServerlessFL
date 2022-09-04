@@ -7,6 +7,12 @@ function showMessage (text) {
     node.innerText = text
     output.appendChild(node)
 }
+function showLink (url) {
+    const node = document.createElement('a')
+    node.href = url
+    node.innerText = `> 🔗 ${url}`
+    output.appendChild(node)
+}
 showMessage("~~~ LOGS ~~~")
 class BP{
     constructor(len,input_dim, batch_size,lr, file_name){
@@ -344,10 +350,10 @@ async function federatedMain(){
     await tf.setBackend("cpu")
     showMessage("=== RUNNING SIMULATED FEDERATED LEARNING TRAINING LOOP===")
     showMessage(`TENSORFLOW BACKEND: ${tf.getBackend()}`)
-    // const C = 0.5 // sampling rate
-    const C = 1 // sampling rate
-    // const K = 10 //number of clients
-    const K = 1 //number of clients
+    const C = 0.5 // sampling rate
+    // const C = 1 // sampling rate
+    const K = 10 //number of clients
+    // const K = 1 //number of clients
     const r = 2 //number of communication rounds
     const clients = []
     for(let z =0 ;z<K;z++){
@@ -360,8 +366,17 @@ async function federatedMain(){
 }
 const normalTrain = document.querySelector("#normal_train").addEventListener("click",normalMain)
 const federatedTrain = document.querySelector("#federated_train").addEventListener("click",federatedMain)
-let peer = null 
-let federation = null
+
+function makeid(length) {
+    var result           = '';
+    var characters       = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    var charactersLength = characters.length;
+    for ( var i = 0; i < length; i++ ) {
+      result += characters.charAt(Math.floor(Math.random() * 
+ charactersLength));
+   }
+   return result;
+}
 
 class PeerNode{
     constructor(){
@@ -370,7 +385,7 @@ class PeerNode{
             this.peerDesignation = null
             this.nn = null
         }
-    async initialize(){
+    initialize(newId,isServer){
         if(this.peer){
             Swal.fire({
                 icon: 'error',
@@ -379,14 +394,44 @@ class PeerNode{
             })
         }
         else{
-            this.peer = new Peer()
-            this.peerStatus = "idle"
-            this.peerDesignation = "server"
+            if(newId){
+                const id = makeid(32)
+                this.peer = new Peer(id)
+            }else{
+                const peer_id = prompt("Enter peer id")
+                this.peer = new Peer(peer_id)
+            }
+            if(isServer){
+                this.peerDesignation = "server"
+                this.peerStatus = "solo"
+                /*
+                    Peer Status types (server):
+                    - solo: not in a federation
+                    - federated: in a federation
+                    - distributing models
+                    - receiving models
+                    - aggregating models
+                    - testing aggregated model
+                    - idle
+                    
+                    Peer Status types (client):
+                    - solo: not in a federation
+                    - federated: in a federation
+                    - downloading model
+                    - training
+                    - sending model to server
+                    - sending data
+                    - idle
+                */
+            }else{
+                this.peerDesignation = "client"
+                this.peerStatus = "solo"
+            }
             this.peer.on("open",id=>{
                 document.querySelector("#peer-id-container").innerText = `Peer ID: ${id}`
                 document.getElementById("peer-designation").innerText = `Peer Designation: ${this.peerDesignation}`
                 document.getElementById("peer-status").innerText = `Peer Status: ${this.peerStatus}`
-                addClientRow(this.peer.id,this.peerStatus,this.peerDesignation,"online")
+                // addClientRow(this.peer.id,this.peerStatus,this.peerDesignation,"online")
             })
         }
     }
@@ -436,24 +481,176 @@ function rowValueUpdate(clientName,column,value){
     const data = document.getElementById(`${clientName}-${column}`)
     data.innerText = value
 }
-
+function setFederationName(name){
+    const element = document.getElementById("federation-name")
+    element.innerText = `Name: ${name}`
+}
 class Federation{
-    constructor(C,K,r,clientNames){
-        this.C = C //sampling rate
-        this.K = K // number of clients
-        this.r = r // number of communication rounds
-        this.clientNames = clientNames
-        this.nn = new BP(0,28,32,0.01,"test")
-        this.clients = []
+    constructor(name){
+        if(federation){
+            alert("FEDERATION ALREADY EXISTS")
+        }else{
+            this.name = name
+            this.server = null
+            this.clients = []
+            this.token = null
+            this.storageClient = null
+            this.setAPIToken()
+            this.setWeb3StorageClient()
+            setFederationName(this.name)
+        }
+    }
+    setServer(somePeerNode){
+        console.log("setting server")
+        console.log(somePeerNode.peer)
+        this.server = somePeerNode
+        this.server.peerStatus = "federated"
+        // console.log(this.server.peer.id)
+        addClientRow(somePeerNode.peer.id,this.server.peerStatus,this.server.peerDesignation,"online")
+    }
+    setAPIToken(){
+        const token = prompt ("Enter your federation's web3 storage api token:")
+        this.token = token
+    }
+    setWeb3StorageClient(){   
+       this.storageClient = new window.Web3Storage({token:this.token})  
+    }
+    addClient(clientID){
+        //accepts client names
+        this.clients.push(clientID)
+    }
+    async createFederationConfig(){
+        //call once all the federation participants have been added
+        const configObject = {
+            "name": this.name,
+            "server": this.server.peer.id,
+            "clients":this.clients
+        } 
+        console.log(configObject)
+        const blob = new Blob([JSON.stringify(configObject)], { type: 'application/json' })
+        console.log(JSON.stringify(configObject))
+        const filename = `${this.name}-config`
+        const fileObjects = [
+            new File([blob],`${filename}.json`)
+        ]
+        const cid = await this.storageClient.put(fileObjects)
+        showMessage(`Stored JSON ${this.name}'s federation config file: ${filename} with CID: ${cid}`)
+        showLink(`https://${cid}.ipfs.w3s.link/${filename}.json`)
     }
 }
 
-async function p2pfedAvgMain(){
-    await tf.setBackend("cpu")
-    const samplingRate = 1
-    const numberOfClients = 1
-    const communicationRounds = 2 
-    peer = new PeerNode()
-    peer.initialize()
+let peer = null 
+let federation = null
+
+async function fetchFederatedConfig(url){
+    const data = await fetch(url)
+    console.log(data)
+    const jsonData = await data.json()
+    console.log(jsonData)
 }
-const p2pFedAvg = document.querySelector("#p2p-main").addEventListener("click",p2pfedAvgMain)
+async function joinFederation(){
+    if(federation.createFederation){
+        if(peer.peerDesignation=="server"){
+            federation.setServer(peer)
+        }
+    }
+}
+
+async function createOrImportFederation(){
+    let createFed = null
+    await Swal.fire({
+            title: 'Create or Import Federation?',
+            showDenyButton: true,
+            showCancelButton: true,
+            confirmButtonText: 'Create',
+            denyButtonText: `Import`,
+            }).then((result) => {
+            /* Read more about isConfirmed, isDenied below */
+            if (result.isConfirmed) {
+            //   Swal.fire('Saved!', '', 'success')
+            createFed = true
+            } else if (result.isDenied) {
+            //   Swal.fire('Changes are not saved', '', 'info')
+            createFed = false
+            }
+    })
+    if(createFed){
+        const federationName = prompt("Enter federation name:")
+        federation = new Federation(federationName)
+        if(peer.peerDesignation=="server"){
+            federation.setServer(peer)
+        }else{
+            alert("Cannot create federation as a client!")
+        }
+    }else{
+        //download an existing federation config
+        alert("downloading federation config is not implemented!")
+    }
+}
+
+function addClientToFederation(){
+    const id = prompt("Enter a client id")
+    federation.addClient(id)
+    addClientRow(id,"federated","client","disconnected")
+}
+document.querySelector("#p2p-main").addEventListener("click",()=>alert("not implemented"))
+document.querySelector("#add-client-federation-btn").addEventListener("click",addClientToFederation)
+document.querySelector("#create-federation-btn").addEventListener("click",createOrImportFederation)
+document.querySelector("#finalize-federation-btn").addEventListener("click",async ()=>{
+    if(federation){
+        await federation.createFederationConfig()
+    }else{
+        Swal.fire({
+            icon: 'error',
+            title: 'Federation does not exist!',
+            text: 'create a federation before you finalize',
+        })
+    }
+})
+document.querySelector("#initialize-peer-node").addEventListener("click",async ()=>{
+    let isServer = null
+    await Swal.fire({
+        title: 'Client or Server?',
+        showDenyButton: true,
+        showCancelButton: true,
+        confirmButtonText: 'Client',
+        denyButtonText: `Server`,
+        }).then((result) => {
+        if (result.isConfirmed) {
+        //   Swal.fire('Saved!', '', 'success')
+        isServer = false
+        } else if (result.isDenied) {
+        //   Swal.fire('Changes are not saved', '', 'info')
+        isServer = true
+        }
+    })
+    if(isServer){
+        peer = new PeerNode()
+        peer.initialize(true,true)
+    } 
+    else{
+        let newID = null
+        await Swal.fire({
+            title: 'New or Existing ID',
+            showDenyButton: true,
+            showCancelButton: true,
+            confirmButtonText: 'New',
+            denyButtonText: `Existing`,
+            }).then((result) => {
+            if (result.isConfirmed) {
+            //   Swal.fire('Saved!', '', 'success')
+            newID = true
+            } else if (result.isDenied) {
+            //   Swal.fire('Changes are not saved', '', 'info')
+            newID = false
+            }
+        })
+        if(newID){
+            peer = new PeerNode()
+            peer.initialize(true,false)
+        }else{
+            peer = new PeerNode()
+            peer.initialize(false,false)
+        }  
+    }
+})

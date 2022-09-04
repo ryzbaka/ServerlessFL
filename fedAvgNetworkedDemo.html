@@ -16,6 +16,10 @@
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl"></script>
     <script src="https://cdn.jsdelivr.net/npm/lodash@4.17.21/lodash.min.js"></script>
     <script src="https://unpkg.com/peerjs@1.3.1/dist/peerjs.min.js"></script>
+    <script type="module">
+      import { Web3Storage } from 'https://cdn.jsdelivr.net/npm/web3.storage/dist/bundle.esm.min.js'
+      window.Web3Storage = Web3Storage
+    </script>
     <style>
         #output {
         display: block;
@@ -68,6 +72,8 @@
                   <strong><span>Federation Details</span></strong>
                   <br>
                   <span id="federation-name">Name: </span>
+                  <br>
+                  <span id="federation-config">Config URL: </span>
                   <table>
                     <thead>
                       <tr>
@@ -79,16 +85,14 @@
                     </thead>
             
                     <tbody id="federation_table_body">
-                      <!-- <tr> -->
-                        <!-- <td>Alvin</td> -->
-                        <!-- <td>Eclair</td> -->
-                        <!-- <td>Connected</td> -->
-                      <!-- </tr> -->
                     </tbody>
                   </table>
                 </div>
                 <div class="card-action">
-                  <a>Join/Create Federation</a>
+                  <a id="add-client-federation-btn">Add client to Federation</a>
+                  <a id="create-federation-btn">Create Federation</a>
+                  <a id="finalize-federation-btn">Finalize Federation</a>
+                  <a id="initialize-peer-node">Initialize Peer</a>
                   <a id="p2p-main">P2P FedAvg</a>
                 </div>
               </div>
