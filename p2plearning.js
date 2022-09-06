@@ -4,6 +4,9 @@ class PeerNode{
         this.peer.on("open",(id)=>{
             showMessage(`This Peer ${id} connected to brokering server.`)
         })
+        this.peer.on("disconnected",()=>{
+            showError("Disconnected from brokering server")
+        })
         this.addressBook = {}
         this.peer.on("connection",connection=>{
             //someone else initiated connection
@@ -11,8 +14,8 @@ class PeerNode{
                 showMessage(`*Connected to ${connection.peer}`)
             })
             connection.on("close",()=>{
-                //won't trigger if the peer that initiated the peer disconnects by simply closing the tab
                 showError(`*Disconnected from ${connection.peer}`)
+                //unreliable, dont add anything else here
             })
             //add new connection to addressBook
             this.addressBook[connection.peer] = {
@@ -27,10 +30,8 @@ class PeerNode{
             showMessage(`Connected to ${connection.peer}`)
         })
         connection.on("close",()=>{
-            //potentially useful for updating number of participating peers
             showError(`Disconnected from ${connection.peer}`)
-            //remove connection from address book
-            // delete this.addressBook[connection.peer]
+            //unreliable don't add anything else here
         })
         //add new connection to addressBook
         this.addressBook[connection.peer] = {
