@@ -21,7 +21,8 @@
    <button id= "chat-with-peer-btn">Send</button>
    <ul id="chat-log"></ul>
    <script>
-       const peer = new Peer();
+       const id = prompt("Enter your chat id")
+       const peer = new Peer(id);
        peer.on('open',(id)=>{
            document.querySelector("#peer-id-container").innerText = `This peer's id : ${id}`;
        })
