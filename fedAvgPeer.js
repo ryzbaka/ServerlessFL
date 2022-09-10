@@ -94,6 +94,32 @@ class BP{
         })
         return layers
     }
+    getWeightsHash(){
+        const layers = { 
+            // "input":this.input,
+            "w1":this.w1, 
+            // "z1":this.z1,
+            // "hidden_layer_1":this.hidden_layer_1,
+            "w2":this.w2, 
+            // "z2":this.z2,
+            // "hidden_layer_2":this.hidden_layer_2,
+            "w3":this.w3, 
+            // "z3":this.z3,
+            // "hidden_layer_3":this.hidden_layer_3,
+            "w4":this.w4, 
+            // "z4":this.z4, 
+            // "output_layer":this.output_layer
+           }
+        Object.keys(layers).forEach(key=>{
+               const intermediaryDfd = new dfd.DataFrame(tf.clone(layers[key]))
+               const jsonTensor = dfd.toJSON(intermediaryDfd)
+               layers[key] = jsonTensor
+        })
+        // const weights = this.getWeights()
+        const weightsString = JSON.stringify(layers)
+        const hash = CryptoJS.SHA256(weightsString)
+        return hash.toString()
+    }
     loadWeights(layers){
         Object.keys(layers).forEach(key=>{
             this[key] = tf.clone((new dfd.DataFrame(layers[key])).tensor)
@@ -174,6 +200,7 @@ function train(nn,epochs,training_X,training_y,testing_X,testing_y){
     //TO DO: Add validation for best model selection.
     // let trainedModel = nn;
     plotTrainingLoss(nn)
+    console.log(`Hash before nn testing: ${nn.getWeightsHash()}`)
     test(nn,testing_X,testing_y)
     return nn
 }
@@ -192,7 +219,7 @@ function test(nn, testing_X,testing_y){
         // let test_y = testing_y
         let pred = []
         let batch = testing_y.shape[0]/nn.batch_size
-
+        console.log(`Model hash before test ${nn.getWeightsHash()}`)
         for(let i=0;i<batch;i++){
             let start = i * nn.batch_size
             let end = start+nn.batch_size
@@ -208,6 +235,7 @@ function test(nn, testing_X,testing_y){
             "actual": Array.from(testing_y.tensor.dataSync()),
             "predicted": Array.from(predictionResult.dataSync()),
         })
+        console.log(`NN hash after testing ${nn.getWeightsHash()}`)
         comparisonData.plot("plot_test").line()
         return mae
     }
@@ -243,6 +271,7 @@ async function normalMain(){
     let modelName = (Math.random() + 1).toString(36).substring(7)
     saveModel(trainedNeuralNetwork,modelName)
     showMessage(`Saved model as: ${modelName}`)
+    console.log(`HASH for this model is ${trainedNeuralNetwork.getWeightsHash()}`)
     testX = testing_X
     testY = testing_y
     // normalTrainedWeights =  trainedNeuralNetwork.getWeights() //normalTrainedWeights is a global variable that has to be deleted.

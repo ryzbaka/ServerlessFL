@@ -19,6 +19,8 @@
   "homepage": "https://github.com/ryzbaka/ServerlessFL#readme",
   "dependencies": {
     "@tensorflow/tfjs": "^3.20.0",
+    "crypto-browserify": "^3.12.0",
+    "crypto-js": "^4.1.1",
     "ipfs": "^0.63.5",
     "ipfs-core": "^0.15.4",
     "level-js": "^6.1.0",
