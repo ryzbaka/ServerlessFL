@@ -47,6 +47,16 @@ class PeerNode{
         console.log(`sending message ${data} to ${id}`)
         this.peer.connections[id][0].send(JSON.stringify(data)) 
     }
+    sendEncryptedMessage(id,message){
+        console.log(`sending encrypted message ${message} to ${id}`)
+        const encryptedMessage = this.encryptMessageForPeer(id,JSON.stringify(message))
+        if(encryptedMessage){
+            this.sendMessage(id,{
+                "message_type":"encrypted_message",
+                "encrypted_message":encryptedMessage
+            })
+        }
+    }
     arrayStringToArray(s){
         console.log("in arrayStringToArray")
         console.log(s)
@@ -140,8 +150,63 @@ class PeerNode{
                     "message-type":"ping",
                 })
             }
+            else if(messageObject.message_type=="encrypted_message"){
+                showMessage(`Processing encrypted message from ${connection.peer}`)
+                const decryptedMessage = this.decryptMessageFromPeer(connection.peer, messageObject.encrypted_message)
+                // const decryptedMessageObject = JSON.parse(decryptedMessage)
+                // console.log(decryptedMessageObject) 
+                const decryptedMessageObject = JSON.parse(decryptedMessage)
+                console.log(decryptedMessageObject)
+                this.processEncryptedMessage(connection,decryptedMessageObject)
+            }
             this.locked = false
             console.log(`${this.peer.id}'s lock has been unlocked`)
+        }
+    }
+    processEncryptedMessage(connection,message){
+        console.log("processing encrypted message")
+        const messageObject = JSON.parse(message)
+        console.log(messageObject)
+        console.log(`Message type is ${messageObject["message_type"]}`)
+        if(messageObject["message_type"]=="text-message"){
+            console.log(`processing text message`)
+            showMessage(`${connection.peer}: ${messageObject.message_content}`)
+        }
+    }
+    sendEncryptedTextMessage(id,content){
+        this.sendEncryptedMessage(id,JSON.stringify({
+            "message_type":"text-message",
+            "message_content":content
+        }))
+    }
+    encryptMessageForPeer(id,message){
+        //add lock here
+        if(!Object.keys(this.addressBook).includes(id)){
+            console.log(this.addressBook)
+            showError(`${id} not in address book.`)
+            return false
+        }else{
+            const secret = this.addressBook[id].secret
+            const key = cryptojs.createHash('sha256').update(String(secret)).digest('base64').substr(0, 32);
+            console.log(`Key is: ${key}`)
+            const algorithm = "aes256"
+            const cipher = cryptojs.createCipher(algorithm,key)
+            const encrypted = cipher.update(message,"utf8","hex")+cipher.final("hex")
+            return encrypted
+        }
+    }
+    decryptMessageFromPeer(id,encryptedData){
+        if(!Object.keys(this.addressBook).includes(id)){
+            showError(`${id} not in address book.`)
+            return false
+        }else{
+            const secret = this.addressBook[id].secret
+            const key = cryptojs.createHash('sha256').update(String(secret)).digest('base64').substr(0, 32);
+            console.log(`Key is: ${key}`)
+            const algorithm = "aes256"
+            const decipher = cryptojs.createDecipher(algorithm,key)
+            const decrypted = decipher.update(encryptedData,"hex","utf8")+decipher.final("utf8")
+            return decrypted    
         }
     }
 
