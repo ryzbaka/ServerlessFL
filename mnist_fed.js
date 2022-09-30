@@ -85,6 +85,7 @@ model.compile({
 
 tfvis.show.modelSummary({name:"Model Architecture"},model)
 
+let training_history = []
 const fitCallbacks = {}
 const {onEpochEnd, onBatchEnd} = tfvis.show.fitCallbacks({ name: 'Model Training' }, ['loss']);
 fitCallbacks["onTrainBegin"] = async (logs)=>{
@@ -92,6 +93,13 @@ fitCallbacks["onTrainBegin"] = async (logs)=>{
 }
 fitCallbacks["onEpochEnd"] = async (epoch,logs)=>{
     console.log(`Epoch: ${epoch} loss: ${logs.loss}`)
+    training_history.push(
+        {
+            "Epoch":epoch,
+            "Loss":logs.loss
+        }
+    )
+    console.log(training_history)
     onEpochEnd(epoch,logs)
 }
 fitCallbacks["onBatchEnd"] = onBatchEnd 
@@ -101,6 +109,7 @@ fitCallbacks["onEpochBegin"] = async (epoch,logs)=>{
 
 async function trainMnist(model,epochs){
     console.log("Train MNIST FUNCTION run.")
+    training_history = []
     await model.fitDataset((processedData), {
         epochs: epochs,
         // regist tensorboard for visualization
@@ -119,5 +128,5 @@ async function trainMnist(model,epochs){
 
 document.getElementById("train-mnist-normal").addEventListener("click",()=>{
     console.log("clicked!")
-    trainMnist(model,1)
+    trainMnist(model,20)
 })
