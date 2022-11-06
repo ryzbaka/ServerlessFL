@@ -4,7 +4,7 @@ localStorage.clear()
 // const training_data_url = '/temporary_datasets/mnist_train.csv' 
 const testing_data_url = '/temporary_datasets/mnist_test.csv' 
 console.log(`The backend is ${tf.getBackend()}`)
-
+const initializer = tf.initializers.glorotUniform({"seed":42})
 function getModel(){
     const newModel = tf.sequential();
     this.datasetLength = 0
@@ -13,46 +13,61 @@ function getModel(){
         filters: 32,
         kernelSize: [5, 5],
         activation: 'relu',
+        kernelInitializer:initializer,
+        biasInitializer:initializer
     }));
     newModel.add(tf.layers.conv2d({
         filters: 32,
         kernelSize: [5, 5],
         activation: 'relu',
+        kernelInitializer:initializer,
+        biasInitializer:initializer
     }));
     newModel.add(tf.layers.maxPooling2d({
         poolSize: [2, 2]
     }));
     newModel.add(tf.layers.dropout({
-        rate: 0.25
+        rate: 0.25,
+        seed:42
     }));
     newModel.add(tf.layers.conv2d({
         filters: 64,
         kernelSize: [3, 3],
         activation: 'relu',
+        kernelInitializer:initializer,
+        biasInitializer:initializer
     }));
     newModel.add(tf.layers.conv2d({
         filters: 64,
         kernelSize: [3, 3],
         activation: 'relu',
+        kernelInitializer:initializer,
+        biasInitializer:initializer
     }));
     newModel.add(tf.layers.maxPooling2d({
         poolSize: [2, 2]
     }));
     newModel.add(tf.layers.dropout({
-        rate: 0.25
+        rate: 0.25,
+        seed:42
     }));
     newModel.add(tf.layers.flatten());
 
     newModel.add(tf.layers.dense({
         units: 256,
-        activation: 'relu'
+        activation: 'relu',
+        kernelInitializer:initializer,
+        biasInitializer:initializer
     }));
     newModel.add(tf.layers.dropout({
-        rate: 0.5
+        rate: 0.5,
+        seed:42
     }));
     newModel.add(tf.layers.dense({
         units: 10,
-        activation: 'softmax'
+        activation: 'softmax',
+        kernelInitializer:initializer,
+        biasInitializer:initializer
     }));
 
     const optimizer = 'rmsprop';
@@ -259,7 +274,7 @@ async function trainMnist(modelObject,epochs,training_data_url,saveModel){
             // we need to do one-hot encoding for each label
             ys: tf.oneHot((Object.values(ys)[0]), 10)
         };
-    }).shuffle(250).batch(64)
+    }).shuffle(250,42,true).batch(64)
     // }).shuffle(1000).batch(64)
     console.log("Train MNIST FUNCTION run.")
     modelObject.training_history = []
@@ -363,12 +378,17 @@ class PeerNode{
             await this.connectTo(peers[i])
         }
     }
-    async initiateFederatedSession(){
+    async initiateFederatedSession(epochs_per_client,noiseScale,resetModel){
+        if(resetModel){
+            this.initFederatedLearning(`${this.id}-model`)
+            localStorage.clear()
+        }
+        // const noiseScale =
         node.weights_queue = []
         //distribute weights to peers in address book
         const peer_ids = Object.keys(this.addressBook)
-        const epochs_per_client = 3
-        const initiator_name = this.peer.id
+        // const epochs_per_client = 3
+        const initiator_name = this.id
         function sleep(miliseconds) {
             var currentTime = new Date().getTime();
          
@@ -377,11 +397,11 @@ class PeerNode{
         }
         peer_ids.forEach(async (el,index)=>{
             // sleep(5000)
-            await this.sendWeightsToPeer(el,epochs_per_client,initiator_name)
+            await this.sendWeightsToPeer(el,epochs_per_client,initiator_name,noiseScale)
             sleep(5000)
         })
     }
-    async sendWeightsToPeer(id,epochs_per_client,initiator_name){
+    async sendWeightsToPeer(id,epochs_per_client,initiator_name,noiseScale){
         const weights = this.model.getWeights()
         const arrayfied_weights = []
         weights.forEach((el,index)=>{
@@ -393,7 +413,8 @@ class PeerNode{
                 "message_content":{
                     "weights":arrayfied_weights,
                     "epochs":epochs_per_client,
-                    "initiator_id":initiator_name
+                    "initiator_id":initiator_name,
+                    "noiseScale":noiseScale
                 }
             }
         ))
@@ -521,12 +542,12 @@ class PeerNode{
                 this.addressBook[connection.peer] = {
                     "dhObject":cryptojs.createDiffieHellman(prime,generator)
                 }
-                showMessage(`${this.peer.id} is generating its keys`)
+                showMessage(`${this.id} is generating its keys`)
                 
                 const myKeys = this.addressBook[connection.peer]["dhObject"].generateKeys()
                 
-                showMessage(`${this.peer.id} generated it's keys`)
-                showMessage(`${this.peer.id} is computing secret`)
+                showMessage(`${this.id} generated it's keys`)
+                showMessage(`${this.id} is computing secret`)
                 
                 const mySecret = this.addressBook[connection.peer]["dhObject"].computeSecret(otherKeys)
                 
@@ -541,11 +562,11 @@ class PeerNode{
                     "keys":myKeys.toJSON().data
                 })
                 
-                showMessage(`${this.peer.id} has computed its secret`)
+                showMessage(`${this.id} has computed its secret`)
             }else if(messageObject.message_type==="join-fed-final-dh"){
                 // const otherKeys = this.arrayStringToArray(messageObject.keys)
                 const otherKeys = messageObject.keys
-                showMessage(`${this.peer.id} is computing its secret`)
+                showMessage(`${this.id} is computing its secret`)
                 const mySecret = this.addressBook[connection.peer]["dhObject"].computeSecret(otherKeys)
                 // showMessage(`${this.peer.id}'s secret is ${mySecret.toString()}`)
                 // console.log(`${this.peer.id}'s secret is ${mySecret.toString()}`)
@@ -553,7 +574,7 @@ class PeerNode{
                     "secret":mySecret.toString()
                 }
                 this.db.putObject("addressBook",this.addressBook)
-                showMessage(`${this.peer.id} has computed its secret`)
+                showMessage(`${this.id} has computed its secret`)
             }
             else if(messageObject.message_type==="ping"){
                 this.sendMessage(connection.peer,{
@@ -623,7 +644,7 @@ class PeerNode{
             })
             this.model.setWeights(tensored_weights)
             showMessage("received global weights")
-            this.runLocalUpdate(messageObject.message_content.epochs,initiator_id,0.001)
+            this.runLocalUpdate(messageObject.message_content.epochs,initiator_id,messageObject.message_content.noiseScale)
         }else if(messageObject["message_type"]=="sent-weights-for-aggregation"){
             const peer_id = messageObject.message_content.peer_id
             console.log(`Received weights for aggregation from ${peer_id}`)
@@ -695,10 +716,10 @@ class PeerNode{
                 aggregatedWeights[j] = aggregatedWeights[j].add(adjusted_weights)    
             }
         }
-        showMessage(`Setting ${this.peer.id}'s weights to the aggregated weights`)
+        showMessage(`Setting ${this.id}'s weights to the aggregated weights`)
         this.model.setWeights(aggregatedWeights)
         const date = new Date()
-        const modelName = `mnist-aggregated-model-${this.peer.id}-${date.getTime()}`
+        const modelName = `mnist-aggregated-model-${this.id}-${date.getTime()}`
         await this.model.save(`localstorage://${modelName}`)
         console.log(`Saved aggregated mode as ${modelName} in localStorage`)
         //sending aggregated weights to participants
@@ -716,12 +737,12 @@ class PeerNode{
                 "message_type":"sent-aggregated-weights",
                 "message_content":{
                     "weights":arrayfied_weights,
-                    "sender":this.peer.id
+                    "sender":this.id
                 }
             }))
         })
         showMessage(`testing ${modelName}`)
-        testMnist(modelName)
+        testMnist(null,this)
     }
     async fetchInitializerDataset(url){
         const data = await tf.data.csv(
@@ -768,7 +789,7 @@ class PeerNode{
     }
     async runLocalUpdate(epochs,initiator_id,scale){
         console.log("RUNNING LOCAL UPDATE ADD NOISE STEP HERE")
-        const client_training_data_url = `/mnist-federated-dataset/client-${this.peer.id}-train.csv`
+        const client_training_data_url = `/mnist-federated-dataset/client-${this.id}-train.csv`
         // const client_training_data_url = `/mnist_non_iid/client-${this.peer.id}-train.csv`
         const datasetLength = await getFederatedDatasetLength(client_training_data_url)
         console.log(`Dataset Length for local update: ${datasetLength}`)
@@ -808,7 +829,7 @@ class PeerNode{
             ]
         }).then(async ()=>{
             const date = new Date()
-            const modelName = `${this.peer.id}-model-${date.getTime()}`
+            const modelName = `${this.id}-model-${date.getTime()}`
             // await this.model.save(`localstorage://${modelName}`)
             showMessage(`Saved model as ${modelName} in localStorage`)
             showMessage(`sending updated weights to ${initiator_id}`)
@@ -818,7 +839,7 @@ class PeerNode{
                 const weightsShape = updated_weights[i].shape
                 console.log(`The weight's shape is:`)
                 console.log(weightsShape)
-                const noise = tf.randomNormal(weightsShape,0,scale) 
+                const noise = tf.randomNormal(weightsShape,0,scale,'float32',42) 
                 updated_weights[i] = updated_weights[i].add(noise)
             }
             const updated_weights_array = []
