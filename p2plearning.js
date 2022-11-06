@@ -1,6 +1,7 @@
 tf.setBackend("webgl")
 localStorage.clear()
-const training_data_url = '/temporary_datasets/mnist_train.csv' 
+
+// const training_data_url = '/temporary_datasets/mnist_train.csv' 
 const testing_data_url = '/temporary_datasets/mnist_test.csv' 
 console.log(`The backend is ${tf.getBackend()}`)
 
@@ -127,6 +128,7 @@ class FederatedModel{
                 const client_index = index[i]
                 console.log(`Local update on client: ${client_index}`)
                 const client_training_data_url = `/mnist-federated-dataset/client-${client_index}-train.csv`
+                // const client_training_data_url = `/mnist_non_iid/client-${client_index}-train.csv`
                 console.log(`Using dataset: ${client_training_data_url}`)
                 nns[client_index] = await trainMnist(nns[client_index],epochs,client_training_data_url,false)
                 const datasetLength = await getFederatedDatasetLength(client_training_data_url)
@@ -232,7 +234,7 @@ async function testMnist(modelName,modelObject){
 
 async function trainMnist(modelObject,epochs,training_data_url,saveModel){
     //add param for dataset link
-    console.log(`Training using ${training_data_url}`)
+    console.log(`===Training using ${training_data_url}===`)
     const trainData = await tf.data.csv(
         training_data_url, {
             hasHeader: true,
@@ -316,19 +318,24 @@ document.getElementById("test-mnist-normal").addEventListener("click",()=>{
 class PeerNode{
     constructor(id){
         this.peer = new Peer(id)
+        this.id = id
         this.db = new LocalDatabase(`${id}-db`)
         this.initFederatedLearning(`${id}-model`)
         this.peer.on("open",(id)=>{
             showMessage(`This Peer ${id} connected to brokering server.`)
+            document.title = `${id}-node`
         })
         this.K = 2
         this.sampling_rate = 1
         this.weights_queue = []
         this.encrypted_message_queue = []
-        this.peer.on("disconnected",()=>{
+        this.peer.on("disconnected",async ()=>{
             showError("Disconnected from brokering server")
+            // this.peer = new Peer(this.peer.id)
+            // await this.connectToPeers()
+            // console.log("done reestablishing connections")
         })
-        this.locked = false
+        // this.locked = false
         this.addressBook = {}
         this.peer.on("connection",connection=>{
             //someone else initiated connection
@@ -360,7 +367,7 @@ class PeerNode{
         node.weights_queue = []
         //distribute weights to peers in address book
         const peer_ids = Object.keys(this.addressBook)
-        const epochs_per_client = 1
+        const epochs_per_client = 3
         const initiator_name = this.peer.id
         function sleep(miliseconds) {
             var currentTime = new Date().getTime();
@@ -368,9 +375,10 @@ class PeerNode{
             while (currentTime + miliseconds >= new Date().getTime()) {
             }
         }
-        peer_ids.forEach((el,index)=>{
+        peer_ids.forEach(async (el,index)=>{
             // sleep(5000)
-            this.sendWeightsToPeer(el,epochs_per_client,initiator_name)
+            await this.sendWeightsToPeer(el,epochs_per_client,initiator_name)
+            sleep(5000)
         })
     }
     async sendWeightsToPeer(id,epochs_per_client,initiator_name){
@@ -389,6 +397,9 @@ class PeerNode{
                 }
             }
         ))
+    }
+    getTrainingHistoryCSV(){
+        alert("not implemented")
     }
     initFederatedLearning(model_name){        
         this.model_name = model_name
@@ -463,11 +474,12 @@ class PeerNode{
     }
     handleData(connection,data){
         showMessage(`Received from ${connection.peer}: ${JSON.parse(data).message_type}`)
-        if(this.locked){
+        // if(this.locked){
+        if(false){
             showError(`Did not respond to message: ${data} from ${connection.peer} (${this.peer.id} is locked.)`)
         }else{
-            this.locked = true
-            showMessage(`Locked ${this.peer.id}`)
+            // this.locked = true
+            // showMessage(`Locked ${this.peer.id}`)
             const messageObject = JSON.parse(data)
             if(messageObject.message_type==="join-fed"){
                 //check address book for peer with id already exists
@@ -476,7 +488,7 @@ class PeerNode{
                 }else{
                     //if not exist, generate prime, generator and keys 
                     showMessage(`initiating DH key share`)
-                    this.lock = true
+                    // this.lock = true
                     this.addressBook[connection.peer] = {
                         "dhObject": cryptojs.createDiffieHellman(256), //delete after verify shared
                         "key-verified":false //set to true once shared key matched
@@ -549,8 +561,8 @@ class PeerNode{
                 })
             }
             else if(messageObject.message_type=="encrypted_message"){
-                // if(!this.locked){
-                    showMessage(`${this.peer.id} locked}`)
+                // if(!this.locked){ -->do not uncomment this
+                    // showMessage(`${this.peer.id} locked}`)
                     showMessage(`Processing encrypted message from ${connection.peer}`)
                     const decryptedMessage = this.decryptMessageFromPeer(connection.peer, messageObject.encrypted_message)
                     // const decryptedMessageObject = JSON.parse(decryptedMessage)
@@ -566,10 +578,10 @@ class PeerNode{
                     // })
                 // }
             }
-            this.locked = false
-            showMessage(`${this.peer.id}'s lock has been unlocked`)
-            this.processEncryptedMessageQueue()
-            // console.log(`${this.peer.id}'s lock has been unlocked`)
+            // this.locked = false
+            // showMessage(`${this.peer.id}'s lock has been unlocked`)
+            // this.processEncryptedMessageQueue()
+            // console.log(`${this.peer.id}'s  has been unlocked`)
         }
     }
     async processEncryptedMessageQueue(){
@@ -579,8 +591,8 @@ class PeerNode{
             const queue_object = this.encrypted_message_queue[0]
             this.encrypted_message_queue = this.encrypted_message_queue.slice(1,)
             // processing dequeued encrypted message
-            this.lock = true
-            showMessage(`Locked ${this.peer.id}`)
+            // this.lock = true
+            // showMessage(`Locked ${this.peer.id}`)
             showMessage(`Processing encrypted message from ${queue_object.connection.peer}`)
             const decryptedMessage = this.decryptMessageFromPeer(queue_object.connection.peer, queue_object.encrypted_message)
             // const decryptedMessageObject = JSON.parse(decryptedMessage)
@@ -589,8 +601,8 @@ class PeerNode{
             this.processEncryptedMessage(queue_object.connection,decryptedMessageObject)
             console.log(decryptedMessageObject)
             this.processEncryptedMessage(queue_object.connection,decryptedMessageObject)       
-            this.lock = false
-            showMessage(`${this.peer.id}'s lock has been unlocked`)
+            // this.lock = false
+            // showMessage(`${this.peer.id}'s lock has been unlocked`)
         }
     }
     async processEncryptedMessage(connection,message){
@@ -610,11 +622,12 @@ class PeerNode{
                 tensored_weights.push(tf.tensor(element))
             })
             this.model.setWeights(tensored_weights)
-            showMessage("updated weights")
-            this.runLocalUpdate(messageObject.message_content.epochs,initiator_id)
+            showMessage("received global weights")
+            this.runLocalUpdate(messageObject.message_content.epochs,initiator_id,0.001)
         }else if(messageObject["message_type"]=="sent-weights-for-aggregation"){
             const peer_id = messageObject.message_content.peer_id
             console.log(`Received weights for aggregation from ${peer_id}`)
+            console.log(messageObject.message_content)
             const datasetLength = messageObject.message_content.datasetLength
             const arrayfied_weights = messageObject.message_content.weights            
             const tensored_weights = []
@@ -629,6 +642,8 @@ class PeerNode{
                     "weights":tensored_weights      
                 }
             )
+            console.log("weights queue:")
+            console.log(this.weights_queue)
             
             this.weights_queue = [...new Map(node.weights_queue.map(item =>
                 [item["peer_id"], item])).values()];
@@ -708,14 +723,60 @@ class PeerNode{
         showMessage(`testing ${modelName}`)
         testMnist(modelName)
     }
-    async runLocalUpdate(epochs,initiator_id){
+    async fetchInitializerDataset(url){
+        const data = await tf.data.csv(
+            url, {
+                hasHeader: true,
+                columnConfigs: {
+                    label: {
+                        isLabel: true
+                    }
+                }
+             } 
+        );
+        return data
+    }
+    async initializeModel(){
+        const client_training_data_url = `/mnist-federated-dataset/init.csv`
+        const datasetLength = await getFederatedDatasetLength(client_training_data_url)
+        console.log(`Dataset Length for local update: ${datasetLength}`)
+        // showMessage(`Running local update on ${client_training_data_url}`)
+        // showMessage(`Local update will run for ${epochs} epochs`)
+        const trainData = await this.fetchInitializerDataset(client_training_data_url)
+        trainData.take(1).forEachAsync((d) => {
+            console.log("init DATA EXAMPLE:")
+            console.log(d)
+        })
+        const processedData = trainData.map(({
+            xs,
+            ys
+        }) => {
+            return {
+                // get all pixels and put them into a tensor with 28 * 28 * 1
+                xs: tf.tensor(Object.values(xs), [28, 28, 1]).div(255),
+                // we need to do one-hot encoding for each label
+                ys: tf.oneHot((Object.values(ys)[0]), 10)
+            };
+        }).shuffle(250).batch(64)//maybe remove the shuffle
+        this.training_history = []
+        await this.model.fitDataset((processedData),{
+            epochs:1,
+            callbacks:[
+                this.fitCallbacks,
+            ]
+        })
+    }
+    async runLocalUpdate(epochs,initiator_id,scale){
+        console.log("RUNNING LOCAL UPDATE ADD NOISE STEP HERE")
         const client_training_data_url = `/mnist-federated-dataset/client-${this.peer.id}-train.csv`
+        // const client_training_data_url = `/mnist_non_iid/client-${this.peer.id}-train.csv`
         const datasetLength = await getFederatedDatasetLength(client_training_data_url)
         console.log(`Dataset Length for local update: ${datasetLength}`)
         showMessage(`Running local update on ${client_training_data_url}`)
         showMessage(`Local update will run for ${epochs} epochs`)
         const trainData = await tf.data.csv(
-            training_data_url, {
+            // training_data_url, {
+            client_training_data_url, {
                 hasHeader: true,
                 columnConfigs: {
                     label: {
@@ -748,20 +809,34 @@ class PeerNode{
         }).then(async ()=>{
             const date = new Date()
             const modelName = `${this.peer.id}-model-${date.getTime()}`
-            await this.model.save(`localstorage://${modelName}`)
+            // await this.model.save(`localstorage://${modelName}`)
             showMessage(`Saved model as ${modelName} in localStorage`)
             showMessage(`sending updated weights to ${initiator_id}`)
-            const updated_weights = this.model.getWeights()
+            let updated_weights = this.model.getWeights()
+            console.log(`ADDING NOISE TO WEIGHTS scale: ${scale}`)
+            for(let i=0;i<updated_weights.length;i++){
+                const weightsShape = updated_weights[i].shape
+                console.log(`The weight's shape is:`)
+                console.log(weightsShape)
+                const noise = tf.randomNormal(weightsShape,0,scale) 
+                updated_weights[i] = updated_weights[i].add(noise)
+            }
             const updated_weights_array = []
             updated_weights.forEach((el,index)=>{
                 updated_weights_array.push(el.arraySync())
             })
+            console.log("===testing noise-free model after local update===")
+            await testMnist(null,this)
+            console.log(`===testing model with noise(scale:${scale}) after local update===`) 
+            this.model.setWeights(updated_weights)
+            await testMnist(null,this)
+            console.log(`THIS PEER IS ${this.id}`)
             this.sendEncryptedMessage(initiator_id,JSON.stringify(
                 {
                     "message_type":"sent-weights-for-aggregation",
                     "message_content":{
                         "weights":updated_weights_array,
-                        "peer_id":this.peer.id,
+                        "peer_id":this.id,
                         "datasetLength":datasetLength
                     }
                 }
