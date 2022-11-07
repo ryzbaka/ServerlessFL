@@ -5,6 +5,12 @@ localStorage.clear()
 const testing_data_url = '/temporary_datasets/mnist_test.csv' 
 console.log(`The backend is ${tf.getBackend()}`)
 const initializer = tf.initializers.glorotUniform({"seed":42})
+function sleep(miliseconds) {
+    var currentTime = new Date().getTime();
+ 
+    while (currentTime + miliseconds >= new Date().getTime()) {
+    }
+}
 function getModel(){
     const newModel = tf.sequential();
     this.datasetLength = 0
@@ -289,7 +295,7 @@ async function trainMnist(modelObject,epochs,training_data_url,saveModel){
         if(saveModel){    
             const date = new Date()
             const modelName = `mnist-model-${date.getTime()}`
-            await modelObject.model.save(`localstorage://${modelName}`)
+            // await modelObject.model.save(`localstorage://${modelName}`)
             console.log(`Saved model as ${modelName} in localStorage`)
         }
     })
@@ -378,23 +384,26 @@ class PeerNode{
             await this.connectTo(peers[i])
         }
     }
-    async initiateFederatedSession(epochs_per_client,noiseScale,resetModel){
+    async initiateFederatedSession(num_rounds,epochs_per_client,noiseScale,resetModel){
+        this.rounds = num_rounds
+        this.epochs_per_client = epochs_per_client
+        this.noiseScale = noiseScale
         if(resetModel){
             this.initFederatedLearning(`${this.id}-model`)
             localStorage.clear()
         }
         // const noiseScale =
-        node.weights_queue = []
+        this.weights_queue = []
         //distribute weights to peers in address book
         const peer_ids = Object.keys(this.addressBook)
         // const epochs_per_client = 3
         const initiator_name = this.id
-        function sleep(miliseconds) {
-            var currentTime = new Date().getTime();
+        // function sleep(miliseconds) {
+        //     var currentTime = new Date().getTime();
          
-            while (currentTime + miliseconds >= new Date().getTime()) {
-            }
-        }
+        //     while (currentTime + miliseconds >= new Date().getTime()) {
+        //     }
+        // }
         peer_ids.forEach(async (el,index)=>{
             // sleep(5000)
             await this.sendWeightsToPeer(el,epochs_per_client,initiator_name,noiseScale)
@@ -720,7 +729,7 @@ class PeerNode{
         this.model.setWeights(aggregatedWeights)
         const date = new Date()
         const modelName = `mnist-aggregated-model-${this.id}-${date.getTime()}`
-        await this.model.save(`localstorage://${modelName}`)
+        // await this.model.save(`localstorage://${modelName}`)
         console.log(`Saved aggregated mode as ${modelName} in localStorage`)
         //sending aggregated weights to participants
         const recepients = []
@@ -732,17 +741,38 @@ class PeerNode{
         finalWeights.forEach((el,index)=>{
             arrayfied_weights.push(el.arraySync())
         }) 
-        recepients.forEach((el,index)=>{
-            this.sendEncryptedMessage(el,JSON.stringify({
-                "message_type":"sent-aggregated-weights",
-                "message_content":{
-                    "weights":arrayfied_weights,
-                    "sender":this.id
-                }
-            }))
-        })
+        // recepients.forEach((el,index)=>{
+        //     this.sendEncryptedMessage(el,JSON.stringify({
+        //         "message_type":"sent-aggregated-weights",
+        //         "message_content":{
+        //             "weights":arrayfied_weights,
+        //             "sender":this.id
+        //         }
+        //     }))
+        // })
         showMessage(`testing ${modelName}`)
         testMnist(null,this)
+        this.rounds-=1
+        if(this.rounds>0){
+            console.log(`rounds left: ${this.rounds}`)
+            this.weights_queue = []
+            recepients.forEach(async (el,index)=>{
+                await this.sendWeightsToPeer(el,this.epochs_per_client,this.id,this.noiseScale)
+                sleep(5000)
+            })
+        }else{
+            console.log("completed all rounds")
+            //final share aggregated weights
+            recepients.forEach((el,index)=>{
+                this.sendEncryptedMessage(el,JSON.stringify({
+                    "message_type":"sent-aggregated-weights",
+                    "message_content":{
+                        "weights":arrayfied_weights,
+                        "sender":this.id
+                    }
+                }))
+            })
+        }
     }
     async fetchInitializerDataset(url){
         const data = await tf.data.csv(
@@ -788,7 +818,6 @@ class PeerNode{
         })
     }
     async runLocalUpdate(epochs,initiator_id,scale){
-        console.log("RUNNING LOCAL UPDATE ADD NOISE STEP HERE")
         const client_training_data_url = `/mnist-federated-dataset/client-${this.id}-train.csv`
         // const client_training_data_url = `/mnist_non_iid/client-${this.peer.id}-train.csv`
         const datasetLength = await getFederatedDatasetLength(client_training_data_url)
@@ -846,8 +875,8 @@ class PeerNode{
             updated_weights.forEach((el,index)=>{
                 updated_weights_array.push(el.arraySync())
             })
-            console.log("===testing noise-free model after local update===")
-            await testMnist(null,this)
+            // console.log("===testing noise-free model after local update===")
+            // await testMnist(null,this)
             console.log(`===testing model with noise(scale:${scale}) after local update===`) 
             this.model.setWeights(updated_weights)
             await testMnist(null,this)
