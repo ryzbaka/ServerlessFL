@@ -103,10 +103,10 @@ class FederatedModel{
             this.training_history.push(
                 {
                     "Epoch":epoch,
-                    "Loss":logs.loss
+                    "Loss":logs.loss,
                 }
             )
-            console.log(this.training_history)
+            // console.log(this.training_history)
             onEpochEnd(epoch,logs)
         }
         // this.fitCallbacks["onBatchEnd"] = onBatchEnd 
@@ -233,23 +233,27 @@ async function testMnist(modelName,modelObject){
         const y = ys.arraySync()
         const labelValue = y.indexOf(Math.max(...y))
         // console.log(`Actual Label ${y.indexOf(Math.max(...y))}`)
-        const prediction = model.predict(xs.reshape([1,28,28,1])).arraySync()[0]
+        const predictionTensor= model.predict(xs.reshape([1,28,28,1]))
+        // const prediction = model.predict(xs.reshape([1,28,28,1])).arraySync()[0]
+        const prediction = predictionTensor.arraySync()[0]
+        predictionTensor.dispose()
         const predictionValue = prediction.indexOf(Math.max(...prediction))
         labelValues.push(labelValue)
         predictedValues.push(predictionValue)
         labelValue==predictionValue?correctlyClassified+=1:incorrectlyClassified+=1
         console.log("/10000 values processed")
+
     })
     labelValuesTensor = tf.tensor(labelValues)
     predictedValuesTensor = tf.tensor(predictedValues)
     console.log("Accuracy:")
     console.log(correctlyClassified/(correctlyClassified+incorrectlyClassified))
-    const precision = tf.metrics.precision(labelValuesTensor,predictedValuesTensor)
-    console.log("Precision:")
-    console.log(precision.arraySync())
-    const recall = tf.metrics.recall(labelValuesTensor,predictedValuesTensor)
-    console.log("Recall:")
-    console.log(recall.arraySync())
+    // const precision = tf.metrics.precision(labelValuesTensor,predictedValuesTensor)
+    // console.log("Precision:")
+    // console.log(precision.arraySync())
+    // const recall = tf.metrics.recall(labelValuesTensor,predictedValuesTensor)
+    // console.log("Recall:")
+    // console.log(recall.arraySync())
     console.log("done testing")
 }
 
@@ -818,7 +822,8 @@ class PeerNode{
         })
     }
     async runLocalUpdate(epochs,initiator_id,scale){
-        const client_training_data_url = `/mnist-federated-dataset/client-${this.id}-train.csv`
+        // const client_training_data_url = `/mnist-federated-dataset/client-${this.id}-train.csv`
+        const client_training_data_url = `/mnist-federated-dataset/client-${this.id}-small-train.csv`
         // const client_training_data_url = `/mnist_non_iid/client-${this.peer.id}-train.csv`
         const datasetLength = await getFederatedDatasetLength(client_training_data_url)
         console.log(`Dataset Length for local update: ${datasetLength}`)
@@ -868,7 +873,7 @@ class PeerNode{
                 const weightsShape = updated_weights[i].shape
                 console.log(`The weight's shape is:`)
                 console.log(weightsShape)
-                const noise = tf.randomNormal(weightsShape,0,scale,'float32',42) 
+                const noise = tf.randomNormal(weightsShape,0,scale) 
                 updated_weights[i] = updated_weights[i].add(noise)
             }
             const updated_weights_array = []
