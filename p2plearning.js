@@ -823,7 +823,7 @@ class PeerNode{
     }
     async runLocalUpdate(epochs,initiator_id,scale){
         // const client_training_data_url = `/mnist-federated-dataset/client-${this.id}-train.csv`
-        const client_training_data_url = `/mnist-federated-dataset/client-${this.id}-small-train.csv`
+        const client_training_data_url = `/mnist-federated-dataset/client-${this.id}-train.csv`
         // const client_training_data_url = `/mnist_non_iid/client-${this.peer.id}-train.csv`
         const datasetLength = await getFederatedDatasetLength(client_training_data_url)
         console.log(`Dataset Length for local update: ${datasetLength}`)
@@ -976,7 +976,16 @@ document.getElementById("init-connect-to-peer").addEventListener("click",()=>{
 document.getElementById("run-simulated-fed").addEventListener("click",simulatedFederatedMain)
 document.getElementById("clear-local-storage").addEventListener("click",()=>localStorage.clear())
 document.getElementById("connect-to-peers").addEventListener("click",()=>node.connectToPeers())
-
+document.getElementById("run-federated-session-p2p").addEventListener("click",()=>{
+    node.initiateFederatedSession(3,5,0.047,false)
+})
+document.getElementById("clear-indexed-db").addEventListener("click",async ()=>{
+    const exisitng_databases = await indexedDB.databases()
+    exisitng_databases.forEach((el,index)=>{
+        indexedDB.deleteDatabase(index.name)
+    })
+    showMessage("Cleared local database")
+})
 async function getUniqueID(){
     const uniqueId = await biri()
     return uniqueId //unique ID limited to device.
