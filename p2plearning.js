@@ -350,7 +350,7 @@ class PeerNode{
             showMessage(`This Peer ${id} connected to brokering server.`)
             document.title = `${id}-node`
         })
-        this.K = 2
+        this.K = parseInt(prompt("Enter the number of clients you'd like to you for the federation:")) 
         this.sampling_rate = 1
         this.weights_queue = []
         this.encrypted_message_queue = []
@@ -408,11 +408,15 @@ class PeerNode{
         //     while (currentTime + miliseconds >= new Date().getTime()) {
         //     }
         // }
-        peer_ids.forEach(async (el,index)=>{
-            // sleep(5000)
-            await this.sendWeightsToPeer(el,epochs_per_client,initiator_name,noiseScale)
-            sleep(5000)
-        })
+        if(peer_ids.length>=this.K){
+            peer_ids.forEach(async (el,index)=>{
+                // sleep(5000)
+                await this.sendWeightsToPeer(el,epochs_per_client,initiator_name,noiseScale)
+                sleep(5000)
+            })
+        }else{
+            alert(`${this.K} not available`)
+        }
     }
     async sendWeightsToPeer(id,epochs_per_client,initiator_name,noiseScale){
         const weights = this.model.getWeights()
@@ -884,7 +888,7 @@ class PeerNode{
             // await testMnist(null,this)
             console.log(`===testing model with noise(scale:${scale}) after local update===`) 
             this.model.setWeights(updated_weights)
-            await testMnist(null,this)
+            // await testMnist(null,this)
             console.log(`THIS PEER IS ${this.id}`)
             this.sendEncryptedMessage(initiator_id,JSON.stringify(
                 {
@@ -896,6 +900,7 @@ class PeerNode{
                     }
                 }
             ))
+            await testMnist(null,this)
         })
     }
     sendEncryptedTextMessage(id,content){
