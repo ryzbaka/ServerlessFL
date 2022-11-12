@@ -351,7 +351,9 @@ class PeerNode{
             document.title = `${id}-node`
         })
         this.K = parseInt(prompt("Enter the number of clients you'd like to you for the federation:")) 
-        this.sampling_rate = 1
+        // this.sampling_rate = 1
+        this.sampling_rate = 0.5 
+        this.selected_clients = []
         this.weights_queue = []
         this.encrypted_message_queue = []
         this.peer.on("disconnected",async ()=>{
@@ -400,6 +402,8 @@ class PeerNode{
         this.weights_queue = []
         //distribute weights to peers in address book
         const peer_ids = Object.keys(this.addressBook)
+        this.selected_clients = _.sampleSize(peer_ids,Math.floor(Math.max(...[this.sampling_rate*this.K,1])))
+        console.log(`Selected clients:${this.selected_clients.toString()}`)
         // const epochs_per_client = 3
         const initiator_name = this.id
         // function sleep(miliseconds) {
@@ -409,16 +413,16 @@ class PeerNode{
         //     }
         // }
         if(peer_ids.length>=this.K){
-            peer_ids.forEach(async (el,index)=>{
+            this.selected_clients.forEach(async (el,index)=>{
                 // sleep(5000)
-                await this.sendWeightsToPeer(el,epochs_per_client,initiator_name,noiseScale)
+                await this.sendWeightsToPeer(el,epochs_per_client,initiator_name,noiseScale,this.rounds)
                 sleep(5000)
             })
         }else{
             alert(`${this.K} not available`)
         }
     }
-    async sendWeightsToPeer(id,epochs_per_client,initiator_name,noiseScale){
+    async sendWeightsToPeer(id,epochs_per_client,initiator_name,noiseScale,roundsleft){
         const weights = this.model.getWeights()
         const arrayfied_weights = []
         weights.forEach((el,index)=>{
@@ -431,7 +435,8 @@ class PeerNode{
                     "weights":arrayfied_weights,
                     "epochs":epochs_per_client,
                     "initiator_id":initiator_name,
-                    "noiseScale":noiseScale
+                    "noiseScale":noiseScale,
+                    "roundsleft":roundsleft
                 }
             }
         ))
@@ -655,15 +660,17 @@ class PeerNode{
             showMessage("Received weights")
             const initiator_id = messageObject.message_content.initiator_id
             const arrayfied_weights = messageObject.message_content.weights 
+            const roundsleft = messageObject.message_content.roundsleft
             const tensored_weights = []
             arrayfied_weights.forEach((element,index)=>{
                 tensored_weights.push(tf.tensor(element))
             })
             this.model.setWeights(tensored_weights)
             showMessage("received global weights")
-            this.runLocalUpdate(messageObject.message_content.epochs,initiator_id,messageObject.message_content.noiseScale)
+            this.runLocalUpdate(messageObject.message_content.epochs,initiator_id,messageObject.message_content.noiseScale,roundsleft)
         }else if(messageObject["message_type"]=="sent-weights-for-aggregation"){
             const peer_id = messageObject.message_content.peer_id
+            const roundsleft = messageObject.message_content.roundsleft
             console.log(`Received weights for aggregation from ${peer_id}`)
             console.log(messageObject.message_content)
             const datasetLength = messageObject.message_content.datasetLength
@@ -672,25 +679,43 @@ class PeerNode{
             arrayfied_weights.forEach((element,index)=>{
                 tensored_weights.push(tf.tensor(element))
             })
-            
-            this.weights_queue.push(
-                {
-                    "peer_id":peer_id,
-                    "datasetLength":datasetLength,
-                    "weights":tensored_weights      
-                }
-            )
-            console.log("weights queue:")
-            console.log(this.weights_queue)
-            
-            this.weights_queue = [...new Map(node.weights_queue.map(item =>
-                [item["peer_id"], item])).values()];
-            if(this.weights_queue.length==(this.K*this.sampling_rate))
-            {
-                this.aggregateWeights()
+            if(Object.keys(this.weights_queue).map(v=>parseInt(v)).includes(roundsleft)){
+                this.weights_queue[roundsleft].push(
+                    {
+                        "peer_id":peer_id,
+                        "datasetLength":datasetLength,
+                        "weights":tensored_weights,
+                    }
+                )
+            }else{
+                this.weights_queue[roundsleft] = []
+                this.weights_queue[roundsleft].push(
+                    {
+                        "peer_id":peer_id,
+                        "datasetLength":datasetLength,
+                        "weights":tensored_weights,
+                    }
+                )
             }
-            // if(this.weights_queue.length==2*(this.K*this.sampling_rate)){
-                
+            if(this.weights_queue[roundsleft].length==this.selected_clients.length){
+                this.aggregateWeights(roundsleft)
+            }
+            // this.weights_queue.push(
+            //     {
+            //         "peer_id":peer_id,
+            //         "datasetLength":datasetLength,
+            //         "weights":tensored_weights,
+            //         "roundsleft":roundsleft      
+            //     }
+            // )
+            // console.log("weights queue:")
+            // console.log(this.weights_queue)
+            
+            // this.weights_queue = [...new Map(node.weights_queue.map(item =>
+            //     [item["peer_id"], item])).values()];
+            // if(this.weights_queue.length==(this.selected_clients.length))
+            // {
+            //     this.aggregateWeights()
             // }
         }else if(messageObject["message_type"]=="sent-aggregated-weights"){
             showMessage(`Received aggregated weights from ${messageObject.message_content.sender}`)
@@ -704,7 +729,7 @@ class PeerNode{
             showMessage(`set local model weights to aggregated weights received from ${messageObject.message_content.sender}`)
         }
     }
-    async aggregateWeights(){
+    async aggregateWeights(roundsleft){
         //aggregating
         showMessage("Weights queue length satisfied, aggregating weights")
         let s = 0;
@@ -713,21 +738,22 @@ class PeerNode{
         let aggregatedWeights = [] //zero array of same shape as that of the received weights
         //populate aggregatedWeights with zeros
         showMessage("populating aggregatedWeights with zeros")
-        const weights = this.weights_queue[0].weights
+        // const weights = this.weights_queue[0].weights
+        const weights = this.weights_queue[roundsleft][0].weights //seleting the first weights array just to create a zeros array like it.
         for(let i=0;i<weights.length;i++){
             aggregatedWeights.push(tf.zerosLike(weights[i]))
         }
         //calculate total number of instances used to train the weights
         showMessage("calculating total number of instances used to train the weights")
-        for(let i=0;i<this.weights_queue.length;i++){
-            s+=this.weights_queue[i].datasetLength
+        for(let i=0;i<this.weights_queue[roundsleft].length;i++){
+            s+=this.weights_queue[roundsleft][i].datasetLength
         }
         // aggregate weights
         showMessage("aggregating weights")
-        for(let i=0;i<this.weights_queue.length;i++){
-            const model_weights = this.weights_queue[i].weights
-            const ratio = this.weights_queue[i].datasetLength/s
-            showMessage(`Aggregating weights from: ${this.weights_queue[i].peer_id}`)
+        for(let i=0;i<this.weights_queue[roundsleft].length;i++){
+            const model_weights = this.weights_queue[roundsleft][i].weights
+            const ratio = this.weights_queue[roundsleft][i].datasetLength/s
+            showMessage(`Aggregating weights from: ${this.weights_queue[roundsleft][i].peer_id}`)
             for(let j=0;j<model_weights.length;j++){
                 const adjusted_weights = model_weights[j].mul(ratio)
                 aggregatedWeights[j] = aggregatedWeights[j].add(adjusted_weights)    
@@ -738,40 +764,36 @@ class PeerNode{
         const date = new Date()
         const modelName = `mnist-aggregated-model-${this.id}-${date.getTime()}`
         // await this.model.save(`localstorage://${modelName}`)
-        console.log(`Saved aggregated mode as ${modelName} in localStorage`)
+        // console.log(`Saved aggregated mode as ${modelName} in localStorage`)
         //sending aggregated weights to participants
-        const recepients = []
-        this.weights_queue.forEach((el,index)=>{
-            recepients.push(el.peer_id)
-        }) 
+        // const recepients = []
+        
+        // this.weights_queue.forEach((el,index)=>{
+        //     recepients.push(el.peer_id)
+        // })
+         
         const finalWeights = this.model.getWeights()
         const arrayfied_weights =[]
         finalWeights.forEach((el,index)=>{
             arrayfied_weights.push(el.arraySync())
         }) 
-        // recepients.forEach((el,index)=>{
-        //     this.sendEncryptedMessage(el,JSON.stringify({
-        //         "message_type":"sent-aggregated-weights",
-        //         "message_content":{
-        //             "weights":arrayfied_weights,
-        //             "sender":this.id
-        //         }
-        //     }))
-        // })
         showMessage(`testing ${modelName}`)
-        testMnist(null,this)
+        // testMnist(null,this)
         this.rounds-=1
         if(this.rounds>0){
             console.log(`rounds left: ${this.rounds}`)
             this.weights_queue = []
-            recepients.forEach(async (el,index)=>{
-                await this.sendWeightsToPeer(el,this.epochs_per_client,this.id,this.noiseScale)
+            const peer_ids = Object.keys(this.addressBook)
+            this.selected_clients = _.sampleSize(peer_ids,Math.floor(Math.max(...[this.sampling_rate*this.K,1])))
+            console.log(`Selected clients:${this.selected_clients.toString()}`)
+            this.selected_clients.forEach(async (el,index)=>{
+                await this.sendWeightsToPeer(el,this.epochs_per_client,this.id,this.noiseScale,this.rounds)
                 sleep(5000)
             })
         }else{
             console.log("completed all rounds")
             //final share aggregated weights
-            recepients.forEach((el,index)=>{
+            Object.keys(this.addressBook).forEach((el,index)=>{
                 this.sendEncryptedMessage(el,JSON.stringify({
                     "message_type":"sent-aggregated-weights",
                     "message_content":{
@@ -780,7 +802,9 @@ class PeerNode{
                     }
                 }))
             })
+            testMnist(null,this)
         }
+        // testMnist(null,this)
     }
     async fetchInitializerDataset(url){
         const data = await tf.data.csv(
@@ -825,7 +849,7 @@ class PeerNode{
             ]
         })
     }
-    async runLocalUpdate(epochs,initiator_id,scale){
+    async runLocalUpdate(epochs,initiator_id,scale,roundsleft){
         // const client_training_data_url = `/mnist-federated-dataset/client-${this.id}-train.csv`
         const client_training_data_url = `/mnist-federated-dataset/client-${this.id}-train.csv`
         // const client_training_data_url = `/mnist_non_iid/client-${this.peer.id}-train.csv`
@@ -884,11 +908,8 @@ class PeerNode{
             updated_weights.forEach((el,index)=>{
                 updated_weights_array.push(el.arraySync())
             })
-            // console.log("===testing noise-free model after local update===")
-            // await testMnist(null,this)
             console.log(`===testing model with noise(scale:${scale}) after local update===`) 
             this.model.setWeights(updated_weights)
-            // await testMnist(null,this)
             console.log(`THIS PEER IS ${this.id}`)
             this.sendEncryptedMessage(initiator_id,JSON.stringify(
                 {
@@ -896,11 +917,12 @@ class PeerNode{
                     "message_content":{
                         "weights":updated_weights_array,
                         "peer_id":this.id,
-                        "datasetLength":datasetLength
+                        "datasetLength":datasetLength,
+                        "roundsleft":roundsleft
                     }
                 }
             ))
-            await testMnist(null,this)
+            // await testMnist(null,this)
         })
     }
     sendEncryptedTextMessage(id,content){
