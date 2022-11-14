@@ -650,7 +650,7 @@ class PeerNode{
         }
     }
     async processEncryptedMessage(connection,message){
-        // console.log("processing encrypted message")
+        showMessage("processing encrypted message")
         const messageObject = JSON.parse(message)
         console.log(messageObject)
         console.log(`Message type is ${messageObject["message_type"]}`)
