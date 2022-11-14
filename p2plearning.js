@@ -243,7 +243,7 @@ async function testMnist(modelName,modelObject){
         labelValues.push(labelValue)
         predictedValues.push(predictionValue)
         labelValue==predictionValue?correctlyClassified+=1:incorrectlyClassified+=1
-        showMessage("/10000 values processed")
+        console.log("/10000 values processed")
 
     })
     labelValuesTensor = tf.tensor(labelValues)
@@ -887,6 +887,8 @@ class PeerNode{
             };
         }).shuffle(250).batch(64)//maybe remove the shuffle
         this.training_history = []
+        showMessage("Training start")
+        showMessage((new Date().toTimeString()))
         await this.model.fitDataset((processedData),{
             epochs:epochs,
             callbacks:[
