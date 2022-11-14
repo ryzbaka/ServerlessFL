@@ -929,7 +929,7 @@ class PeerNode{
                     }
                 }
             ))
-            await testMnist(null,this)
+            // await testMnist(null,this)
         })
     }
     sendEncryptedTextMessage(id,content){
