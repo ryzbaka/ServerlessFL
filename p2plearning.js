@@ -96,10 +96,12 @@ class FederatedModel{
         this.fitCallbacks = {}
         const {onEpochEnd, onBatchEnd} = tfvis.show.fitCallbacks({ name: 'Model Training' }, ['loss']);
         this.fitCallbacks["onTrainBegin"] = async (logs)=>{
-            console.log("begun training [callback]")
+            showMessage("begun training [callback]")
+            showMessage((new Date().toTimeString()))
         }
         this.fitCallbacks["onEpochEnd"] = async (epoch,logs)=>{
-            console.log(`Epoch: ${epoch} loss: ${logs.loss}`)
+            showMessage(`Epoch: ${epoch} loss: ${logs.loss}`)
+            showMessage((new Date().toTimeString()))
             this.training_history.push(
                 {
                     "Epoch":epoch,
@@ -891,6 +893,8 @@ class PeerNode{
                 this.fitCallbacks,
             ]
         }).then(async ()=>{
+            showMessage("Training completed")
+            showMessage((new Date().toTimeString()))
             const date = new Date()
             const modelName = `${this.id}-model-${date.getTime()}`
             // await this.model.save(`localstorage://${modelName}`)
