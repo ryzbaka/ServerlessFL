@@ -246,8 +246,8 @@ async function testMnist(modelName,modelObject){
     })
     labelValuesTensor = tf.tensor(labelValues)
     predictedValuesTensor = tf.tensor(predictedValues)
-    console.log("Accuracy:")
-    console.log(correctlyClassified/(correctlyClassified+incorrectlyClassified))
+    showMessage("Accuracy:")
+    showMessage(correctlyClassified/(correctlyClassified+incorrectlyClassified))
     // const precision = tf.metrics.precision(labelValuesTensor,predictedValuesTensor)
     // console.log("Precision:")
     // console.log(precision.arraySync())
@@ -390,7 +390,8 @@ class PeerNode{
             await this.connectTo(peers[i])
         }
     }
-    async initiateFederatedSession(num_rounds,epochs_per_client,noiseScale,resetModel){
+    async initiateFederatedSession(sampling_rate=0.5,num_rounds,epochs_per_client,noiseScale,resetModel){
+        this.sampling_rate = sampling_rate
         this.rounds = num_rounds
         this.epochs_per_client = epochs_per_client
         this.noiseScale = noiseScale
@@ -536,16 +537,16 @@ class PeerNode{
                         "dhObject": cryptojs.createDiffieHellman(256), //delete after verify shared
                         "key-verified":false //set to true once shared key matched
                     }
-                    showMessage("Generating key, prime and generator")
+                    // showMessage("Generating key, prime and generator")
                     const keys = this.addressBook[connection.peer]["dhObject"].generateKeys()
-                    showMessage("Generated key")
-                    console.log("my key is:")
+                    // showMessage("Generated key")
+                    // console.log("my key is:")
                     console.log(keys)
                     const prime = this.addressBook[connection.peer]["dhObject"].getPrime().toJSON().data
-                    showMessage("Generated prime")
+                    // showMessage("Generated prime")
                     const generator = this.addressBook[connection.peer]["dhObject"].getGenerator().toJSON().data
-                    showMessage("Generated generator")
-                    showMessage(`Sending key, prime and generator to ${connection.peer}`)
+                    // showMessage("Generated generator")
+                    // showMessage(`Sending key, prime and generator to ${connection.peer}`)
                     this.sendMessage(connection.peer,{
                         "message_type":"join-fed-init-dh",
                         "keys":keys.toJSON().data,
@@ -564,12 +565,12 @@ class PeerNode{
                 this.addressBook[connection.peer] = {
                     "dhObject":cryptojs.createDiffieHellman(prime,generator)
                 }
-                showMessage(`${this.id} is generating its keys`)
+                // showMessage(`${this.id} is generating its keys`)
                 
                 const myKeys = this.addressBook[connection.peer]["dhObject"].generateKeys()
                 
-                showMessage(`${this.id} generated it's keys`)
-                showMessage(`${this.id} is computing secret`)
+                // showMessage(`${this.id} generated it's keys`)
+                // showMessage(`${this.id} is computing secret`)
                 
                 const mySecret = this.addressBook[connection.peer]["dhObject"].computeSecret(otherKeys)
                 
@@ -584,11 +585,11 @@ class PeerNode{
                     "keys":myKeys.toJSON().data
                 })
                 
-                showMessage(`${this.id} has computed its secret`)
+                // showMessage(`${this.id} has computed its secret`)
             }else if(messageObject.message_type==="join-fed-final-dh"){
                 // const otherKeys = this.arrayStringToArray(messageObject.keys)
                 const otherKeys = messageObject.keys
-                showMessage(`${this.id} is computing its secret`)
+                // showMessage(`${this.id} is computing its secret`)
                 const mySecret = this.addressBook[connection.peer]["dhObject"].computeSecret(otherKeys)
                 // showMessage(`${this.peer.id}'s secret is ${mySecret.toString()}`)
                 // console.log(`${this.peer.id}'s secret is ${mySecret.toString()}`)
@@ -596,7 +597,7 @@ class PeerNode{
                     "secret":mySecret.toString()
                 }
                 this.db.putObject("addressBook",this.addressBook)
-                showMessage(`${this.id} has computed its secret`)
+                // showMessage(`${this.id} has computed its secret`)
             }
             else if(messageObject.message_type==="ping"){
                 this.sendMessage(connection.peer,{
@@ -606,7 +607,7 @@ class PeerNode{
             else if(messageObject.message_type=="encrypted_message"){
                 // if(!this.locked){ -->do not uncomment this
                     // showMessage(`${this.peer.id} locked}`)
-                    showMessage(`Processing encrypted message from ${connection.peer}`)
+                    // showMessage(`Processing encrypted message from ${connection.peer}`)
                     const decryptedMessage = this.decryptMessageFromPeer(connection.peer, messageObject.encrypted_message)
                     // const decryptedMessageObject = JSON.parse(decryptedMessage)
                     // console.log(decryptedMessageObject) 
@@ -636,7 +637,7 @@ class PeerNode{
             // processing dequeued encrypted message
             // this.lock = true
             // showMessage(`Locked ${this.peer.id}`)
-            showMessage(`Processing encrypted message from ${queue_object.connection.peer}`)
+            // showMessage(`Processing encrypted message from ${queue_object.connection.peer}`)
             const decryptedMessage = this.decryptMessageFromPeer(queue_object.connection.peer, queue_object.encrypted_message)
             // const decryptedMessageObject = JSON.parse(decryptedMessage)
             // console.log(decryptedMessageObject) 
@@ -649,13 +650,13 @@ class PeerNode{
         }
     }
     async processEncryptedMessage(connection,message){
-        console.log("processing encrypted message")
+        // console.log("processing encrypted message")
         const messageObject = JSON.parse(message)
         console.log(messageObject)
         console.log(`Message type is ${messageObject["message_type"]}`)
         if(messageObject["message_type"]=="text-message"){
             console.log(`processing text message`)
-            showMessage(`${connection.peer}: ${messageObject.message_content}`)
+            // showMessage(`${connection.peer}: ${messageObject.message_content}`)
         }else if(messageObject["message_type"]=="sent-weights"){
             showMessage("Received weights")
             const initiator_id = messageObject.message_content.initiator_id
@@ -737,14 +738,14 @@ class PeerNode{
         let trained_weights = []
         let aggregatedWeights = [] //zero array of same shape as that of the received weights
         //populate aggregatedWeights with zeros
-        showMessage("populating aggregatedWeights with zeros")
+        // showMessage("populating aggregatedWeights with zeros")
         // const weights = this.weights_queue[0].weights
         const weights = this.weights_queue[roundsleft][0].weights //seleting the first weights array just to create a zeros array like it.
         for(let i=0;i<weights.length;i++){
             aggregatedWeights.push(tf.zerosLike(weights[i]))
         }
         //calculate total number of instances used to train the weights
-        showMessage("calculating total number of instances used to train the weights")
+        // showMessage("calculating total number of instances used to train the weights")
         for(let i=0;i<this.weights_queue[roundsleft].length;i++){
             s+=this.weights_queue[roundsleft][i].datasetLength
         }
@@ -893,7 +894,7 @@ class PeerNode{
             const date = new Date()
             const modelName = `${this.id}-model-${date.getTime()}`
             // await this.model.save(`localstorage://${modelName}`)
-            showMessage(`Saved model as ${modelName} in localStorage`)
+            // showMessage(`Saved model as ${modelName} in localStorage`)
             showMessage(`sending updated weights to ${initiator_id}`)
             let updated_weights = this.model.getWeights()
             console.log(`ADDING NOISE TO WEIGHTS scale: ${scale}`)
@@ -922,7 +923,7 @@ class PeerNode{
                     }
                 }
             ))
-            // await testMnist(null,this)
+            await testMnist(null,this)
         })
     }
     sendEncryptedTextMessage(id,content){
@@ -1004,7 +1005,7 @@ document.getElementById("run-simulated-fed").addEventListener("click",simulatedF
 document.getElementById("clear-local-storage").addEventListener("click",()=>localStorage.clear())
 document.getElementById("connect-to-peers").addEventListener("click",()=>node.connectToPeers())
 document.getElementById("run-federated-session-p2p").addEventListener("click",()=>{
-    node.initiateFederatedSession(3,5,0.047,false)
+    node.initiateFederatedSession(0.5,3,5,0.047,false)
 })
 document.getElementById("clear-indexed-db").addEventListener("click",async ()=>{
     const exisitng_databases = await indexedDB.databases()
