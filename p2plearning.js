@@ -243,7 +243,7 @@ async function testMnist(modelName,modelObject){
         labelValues.push(labelValue)
         predictedValues.push(predictionValue)
         labelValue==predictionValue?correctlyClassified+=1:incorrectlyClassified+=1
-        console.log("/10000 values processed")
+        showMessage("/10000 values processed")
 
     })
     labelValuesTensor = tf.tensor(labelValues)
