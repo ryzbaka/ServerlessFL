@@ -229,8 +229,8 @@ async function testMnist(modelName,modelObject){
         };
     }).batch(64)
     const res = await model.evaluateDataset(processedData)
-    console.log("Accuracy:")
-    console.log(res[1].arraySync())
+    showMessage("Accuracy:")
+    showMessage(res[1].arraySync())
     // const labelValues = []
     // const predictedValues = []
     // correctlyClassified = 0
