@@ -1,4 +1,5 @@
 tf.setBackend("webgl")
+tf.enableProdMode()
 localStorage.clear()
 
 // const training_data_url = '/temporary_datasets/mnist_train.csv' 
@@ -226,30 +227,36 @@ async function testMnist(modelName,modelObject){
             // we need to do one-hot encoding for each label
             ys: tf.oneHot((Object.values(ys)[0]), 10)
         };
-    })
-    const labelValues = []
-    const predictedValues = []
-    correctlyClassified = 0
-    incorrectlyClassified = 0 
-    await processedData.forEachAsync(({xs,ys})=>{
-        const y = ys.arraySync()
-        const labelValue = y.indexOf(Math.max(...y))
-        // console.log(`Actual Label ${y.indexOf(Math.max(...y))}`)
-        const predictionTensor= model.predict(xs.reshape([1,28,28,1]))
-        // const prediction = model.predict(xs.reshape([1,28,28,1])).arraySync()[0]
-        const prediction = predictionTensor.arraySync()[0]
-        predictionTensor.dispose()
-        const predictionValue = prediction.indexOf(Math.max(...prediction))
-        labelValues.push(labelValue)
-        predictedValues.push(predictionValue)
-        labelValue==predictionValue?correctlyClassified+=1:incorrectlyClassified+=1
-        console.log("/10000 values processed")
+    }).batch(64)
+    const res = await model.evaluateDataset(processedData)
+    console.log("Accuracy:")
+    console.log(res[1].arraySync())
+    // const labelValues = []
+    // const predictedValues = []
+    // correctlyClassified = 0
+    // incorrectlyClassified = 0 
+    // await processedData.forEachAsync(({xs,ys})=>{
+    //     const y = ys.arraySync()
+    //     const labelValue = y.indexOf(Math.max(...y))
+    //     // console.log(`Actual Label ${y.indexOf(Math.max(...y))}`)
+    //     const predictionTensor= model.predict(xs.reshape([1,28,28,1]))
+    //     // const prediction = model.predict(xs.reshape([1,28,28,1])).arraySync()[0]
+    //     const prediction = predictionTensor.arraySync()[0]
+    //     predictionTensor.dispose()
+    //     const predictionValue = prediction.indexOf(Math.max(...prediction))
+    //     // labelValues.push(labelValue)
+    //     // predictedValues.push(predictionValue)
+    //     labelValue==predictionValue?correctlyClassified+=1:incorrectlyClassified+=1
+    //     xs.dispose()
+    //     ys.dispose()
+    //     console.log("/10000 values processed")
 
-    })
-    labelValuesTensor = tf.tensor(labelValues)
-    predictedValuesTensor = tf.tensor(predictedValues)
-    showMessage("Accuracy:")
-    showMessage(correctlyClassified/(correctlyClassified+incorrectlyClassified))
+    // })
+    //--------x
+    // labelValuesTensor = tf.tensor(labelValues)
+    // predictedValuesTensor = tf.tensor(predictedValues)
+    // showMessage("Accuracy:")
+    // showMessage(correctlyClassified/(correctlyClassified+incorrectlyClassified))
     // const precision = tf.metrics.precision(labelValuesTensor,predictedValuesTensor)
     // console.log("Precision:")
     // console.log(precision.arraySync())
@@ -793,6 +800,7 @@ class PeerNode{
                 await this.sendWeightsToPeer(el,this.epochs_per_client,this.id,this.noiseScale,this.rounds)
                 sleep(5000)
             })
+            testMnist(null,this)
         }else{
             console.log("completed all rounds")
             //final share aggregated weights
@@ -871,10 +879,10 @@ class PeerNode{
                 }
              } 
         );
-        trainData.take(1).forEachAsync((d) => {
-            console.log("TRAINING DATA EXAMPLE:")
-            console.log(d)
-        })
+        // trainData.take(1).forEachAsync((d) => {
+            // console.log("TRAINING DATA EXAMPLE:")
+            // console.log(d)
+        // })
         const processedData = trainData.map(({
             xs,
             ys
@@ -910,6 +918,7 @@ class PeerNode{
                 console.log(weightsShape)
                 const noise = tf.randomNormal(weightsShape,0,scale) 
                 updated_weights[i] = updated_weights[i].add(noise)
+                noise.dispose()
             }
             const updated_weights_array = []
             updated_weights.forEach((el,index)=>{
@@ -929,7 +938,8 @@ class PeerNode{
                     }
                 }
             ))
-            // await testMnist(null,this)
+            // tf.tidy(async ()=>await testMnist(null,this))
+            await testMnist(null,this)
         })
     }
     sendEncryptedTextMessage(id,content){
