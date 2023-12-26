@@ -1022,7 +1022,7 @@ document.getElementById("connect-to-peers").addEventListener("click",()=>node.co
 document.getElementById("run-federated-session-p2p").addEventListener("click",()=>{
     // node.initiateFederatedSession(0.5,3,5,0.047,false)
     // node.initiateFederatedSession(0.5,3,5,0,false)
-    node.initiateFederatedSession(1.0,3,5,0.047,false)
+    node.initiateFederatedSession(1.0,20,2,0.047,false)
 })
 document.getElementById("clear-indexed-db").addEventListener("click",async ()=>{
     const exisitng_databases = await indexedDB.databases()
